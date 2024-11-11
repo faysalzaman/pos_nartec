@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "241717045871",
+    "project_id": "lastest-motion-acd",
+    "storage_bucket": "lastest-motion-acd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:241717045871:android:5b9e7eea19a2536f57fb9a",
+        "android_client_info": {
+          "package_name": "com.latestmotionacd.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGKf0v6pdVn1MAkkw4CCS4vSvDUONZb_4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:241717045871:android:9662ddf15a3cec1457fb9a",
+        "android_client_info": {
+          "package_name": "com.latestmotionacd.web"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGKf0v6pdVn1MAkkw4CCS4vSvDUONZb_4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
