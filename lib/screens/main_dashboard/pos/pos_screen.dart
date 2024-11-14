@@ -136,19 +136,7 @@ class _POSScreenState extends State<POSScreen> {
               ),
               const SizedBox(width: 8),
               TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.restaurant),
-                label: const Text('Kitchen'),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.grey.shade100,
-                  foregroundColor: Colors.black87,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () {},
+                onPressed: _showInProcessDialog,
                 icon: const Icon(Icons.pending),
                 label: const Text('In Process'),
                 style: TextButton.styleFrom(
@@ -351,7 +339,7 @@ class _POSScreenState extends State<POSScreen> {
                               ),
                               Text(
                                 '\$${calculateTotal().toStringAsFixed(2)}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                 ),
                               ),
@@ -635,6 +623,157 @@ class _POSScreenState extends State<POSScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showInProcessDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Orders in process',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Tab buttons
+                Row(
+                  children: [
+                    _buildTabButton(
+                      icon: Icons.pending,
+                      label: 'Pending',
+                      count: '0',
+                      color: Colors.orange,
+                      onPressed: () {
+                        setState(() {
+                          print('Pending');
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    _buildTabButton(
+                      icon: Icons.restaurant,
+                      label: 'Preparing',
+                      count: '0',
+                      color: Colors.blue[900]!,
+                      onPressed: () {},
+                    ),
+                    const SizedBox(width: 16),
+                    _buildTabButton(
+                      icon: Icons.check_circle,
+                      label: 'Ready',
+                      count: '32',
+                      color: Colors.green,
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Orders list
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: 5, // Replace with actual orders count
+                    itemBuilder: (context, index) => _buildOrderItem(),
+                  ),
+                ),
+                // Close button
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabButton({
+    required IconData icon,
+    required String label,
+    required String count,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(label),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                count,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderItem() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Order #241107265904',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Progress: 100%'),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text('Type: takeaway (Est incididunt dolo)'),
+          Text('Customer: Guest'),
+          Text('Created at: 11/7/2024, 11:12:12 AM'),
+          Text('Last updated at: 11/7/2024, 11:12:46 AM'),
+        ],
+      ),
     );
   }
 }
