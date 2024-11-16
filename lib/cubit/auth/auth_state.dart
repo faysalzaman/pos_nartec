@@ -1,5 +1,5 @@
 // Auth States
-import 'package:pos/model/login_model.dart';
+import 'package:pos/model/auth/login_model.dart';
 
 abstract class AuthState {}
 

@@ -1,4 +1,4 @@
-import 'package:pos/model/login_model.dart';
+import 'package:pos/model/auth/login_model.dart';
 import 'package:pos/utils/app_preferences.dart';
 import 'package:pos/utils/app_url.dart';
 import 'package:http/http.dart' as http;
@@ -20,8 +20,6 @@ class AuthController {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      // Add any additional headers your API requires
-      // 'Authorization': 'Bearer ${AppPreferences.getToken()}',  // If needed
     };
 
     final response = await http.post(url, body: body, headers: headers);
@@ -35,7 +33,6 @@ class AuthController {
       await AppPreferences.saveUserData(loginResponse.user);
       return loginResponse;
     } else {
-      print(data);
       throw Exception(data['message']);
     }
   }

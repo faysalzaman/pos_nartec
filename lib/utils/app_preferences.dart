@@ -1,4 +1,4 @@
-import 'package:pos/model/login_model.dart';
+import 'package:pos/model/auth/login_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
