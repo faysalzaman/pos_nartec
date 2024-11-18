@@ -7,6 +7,8 @@ class SalesInitial extends SalesState {}
 
 class SalesLoading extends SalesState {}
 
+class SalesDeletedLoading extends SalesState {}
+
 class SalesSuccess extends SalesState {
   final SalesModel response;
 
@@ -18,6 +20,8 @@ class SalesSuccessById extends SalesState {
 
   SalesSuccessById({required this.response});
 }
+
+class SalesDeletedById extends SalesState {}
 
 class SalesError extends SalesState {
   final String message;

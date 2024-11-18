@@ -45,4 +45,20 @@ class SalesController {
       throw Exception(data['message']);
     }
   }
+
+  // delete sales by id
+  static Future deleteSalesOrderById(String id) async {
+    final url = Uri.parse("${AppUrl.baseUrl}/api/orders/$id");
+
+    final response = await http.delete(url);
+    final data = jsonDecode(response.body);
+
+    print(data);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return data;
+    } else {
+      throw Exception(data['message']);
+    }
+  }
 }

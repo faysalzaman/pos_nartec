@@ -177,6 +177,8 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                                             SalesDetailScreen(
                                               id: order.id ?? '',
                                               orderType: order.orderType ?? '',
+                                              rowPerPage: _rowsPerPage,
+                                              currentRow: _currentPage,
                                             ),
                                           );
                                         },
