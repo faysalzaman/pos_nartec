@@ -9,16 +9,14 @@ class SalesController {
   static Future<SalesModel> getSalesOrders({
     required int page,
     required int limit,
-    String? search,
-    String? orderType,
-    String? chef,
-    String? taker,
-    String? cashier,
-    String? sortBy = "updatedAt",
-    String? sortOrder = "-1",
+    String search = "",
+    String orderType = "",
+    String chef = "",
+    String taker = "",
+    String cashier = "",
   }) async {
-    final url =
-        Uri.parse("${AppUrl.baseUrl}/api/orders/sales?page=$page&limit=$limit");
+    final url = Uri.parse(
+        "${AppUrl.baseUrl}/api/orders/sales?page=$page&limit=$limit&search=$search&orderType=$orderType&chef=$chef&taker=$taker&cashier=$cashier");
 
     final response = await http.get(url);
     final data = jsonDecode(response.body);

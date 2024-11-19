@@ -21,32 +21,26 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
   SalesModel? orders;
   SalesModel? filteredOrders;
 
+  TextEditingController searchController = TextEditingController();
+
   // Pagination
   int _currentPage = 1;
   final int _rowsPerPage = 10;
 
-  // Filters
-  String byOrderType = "Delivery";
-  List<String> orderType = ["Delivery", "Dine-in", "Take-away"];
+  // // Filters
+  // String byOrderType = "Delivery";
+  // List<String> orderType = ["Delivery", "Dine-in", "Take-away"];
 
-  String takerBy = "Taker 1";
-  List<String> taker = ["Taker 1", "Taker 2", "Taker 3"];
+  // String takerBy = "Taker 1";
+  // List<String> taker = ["Taker 1", "Taker 2", "Taker 3"];
 
-  String chefBy = "Chef 1";
-  List<String> chef = ["Chef 1", "Chef 2", "Chef 3"];
+  // String chefBy = "Chef 1";
+  // List<String> chef = ["Chef 1", "Chef 2", "Chef 3"];
 
-  String checkoutBy = "Cashier 1";
-  List<String> cashier = ["Cashier 1", "Cashier 2", "Cashier 3"];
+  // String checkoutBy = "Cashier 1";
+  // List<String> cashier = ["Cashier 1", "Cashier 2", "Cashier 3"];
 
-  String sortBy = "Updated at";
-  List<String> sortOptions = [
-    "Updated at",
-    "Created at",
-    "Order number",
-    "Customer name"
-  ];
-
-  bool _showFilterPanel = false;
+  // bool _showFilterPanel = false;
 
   List<Orders> allOrders = [];
 
@@ -61,6 +55,12 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
           page: _currentPage,
           limit: _rowsPerPage,
         );
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -116,6 +116,30 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                       children: [
                         Expanded(
                           child: TextField(
+                            onChanged: (value) {
+                              if (value.isEmpty) {
+                                // Reset to original orders when search is cleared
+                                setState(() {
+                                  filteredOrders = orders;
+                                });
+                              } else {
+                                // Search by order no
+                                var filtered = orders?.orders
+                                        ?.where((order) => order.orderNo
+                                            .toString()
+                                            .toLowerCase()
+                                            .contains(value.toLowerCase()))
+                                        .toList() ??
+                                    [];
+                                setState(() {
+                                  filteredOrders = SalesModel(
+                                    orders: filtered,
+                                    pagination: orders?.pagination,
+                                  );
+                                });
+                              }
+                            },
+                            controller: searchController,
                             decoration: InputDecoration(
                               hintText: 'Search',
                               prefixIcon: const Icon(Icons.search),
@@ -130,19 +154,19 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _showFilterPanel = !_showFilterPanel;
-                            });
-                          },
-                          icon: const Icon(Icons.filter_list),
-                          label: const Text('Filters'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
+                        // ElevatedButton.icon(
+                        //   onPressed: () {
+                        //     setState(() {
+                        //       _showFilterPanel = !_showFilterPanel;
+                        //     });
+                        //   },
+                        //   icon: const Icon(Icons.filter_list),
+                        //   label: const Text('Filters'),
+                        //   style: ElevatedButton.styleFrom(
+                        //     backgroundColor: AppColors.primary,
+                        //     foregroundColor: Colors.white,
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -282,63 +306,59 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                   ),
                 ],
               ),
-              // Filter Panel
-              if (_showFilterPanel)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 300,
-                  child: Material(
-                    elevation: 8,
-                    child: Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Filters',
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold)),
-                                IconButton(
-                                  onPressed: () {
-                                    setState(() => _showFilterPanel = false);
-                                  },
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDropdown(
-                                'By Order Type', orderType, byOrderType,
-                                (value) {
-                              setState(() => byOrderType = value!);
-                            }),
-                            _buildDropdown('By Taker', taker, takerBy, (value) {
-                              setState(() => takerBy = value!);
-                            }),
-                            _buildDropdown('By Chef', chef, chefBy, (value) {
-                              setState(() => chefBy = value!);
-                            }),
-                            _buildDropdown('By Cashier', cashier, checkoutBy,
-                                (value) {
-                              setState(() => checkoutBy = value!);
-                            }),
-                            _buildDropdown('Sort By', sortOptions, sortBy,
-                                (value) {
-                              setState(() => sortBy = value!);
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              // // Filter Panel
+              // if (_showFilterPanel)
+              //   Positioned(
+              //     right: 0,
+              //     top: 0,
+              //     bottom: 0,
+              //     width: 300,
+              //     child: Material(
+              //       elevation: 8,
+              //       child: Container(
+              //         color: Colors.white,
+              //         padding: const EdgeInsets.all(16),
+              //         child: SingleChildScrollView(
+              //           child: Column(
+              //             crossAxisAlignment: CrossAxisAlignment.start,
+              //             children: [
+              //               Row(
+              //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //                 children: [
+              //                   const Text('Filters',
+              //                       style: TextStyle(
+              //                           fontSize: 20,
+              //                           fontWeight: FontWeight.bold)),
+              //                   IconButton(
+              //                     onPressed: () {
+              //                       setState(() => _showFilterPanel = false);
+              //                     },
+              //                     icon: const Icon(Icons.close),
+              //                   ),
+              //                 ],
+              //               ),
+              //               const SizedBox(height: 16),
+              //               _buildDropdown(
+              //                   'By Order Type', orderType, byOrderType,
+              //                   (value) {
+              //                 setState(() => byOrderType = value!);
+              //               }),
+              //               _buildDropdown('By Taker', taker, takerBy, (value) {
+              //                 setState(() => takerBy = value!);
+              //               }),
+              //               _buildDropdown('By Chef', chef, chefBy, (value) {
+              //                 setState(() => chefBy = value!);
+              //               }),
+              //               _buildDropdown('By Cashier', cashier, checkoutBy,
+              //                   (value) {
+              //                 setState(() => checkoutBy = value!);
+              //               }),
+              //             ],
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //   ),
             ],
           );
         },
@@ -355,6 +375,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
+          dropdownColor: Colors.white,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             filled: true,

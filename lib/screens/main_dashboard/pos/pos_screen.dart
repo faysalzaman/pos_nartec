@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:pos/cubit/category/category_cubit.dart';
+import 'package:pos/cubit/category/category_state.dart';
+import 'package:pos/model/category/category_model.dart';
 import 'package:pos/utils/app_colors.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class POSScreen extends StatefulWidget {
   const POSScreen({super.key});
@@ -19,13 +24,51 @@ class _POSScreenState extends State<POSScreen> {
   TextEditingController staffNote = TextEditingController();
   TextEditingController paymentNote = TextEditingController();
 
+  // Add these variables
+  List<Category> categories = [];
+  int currentPage = 1;
+  final int limit = 10;
+  bool isLoadingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+    _scrollController.addListener(_onScroll);
+  }
+
   @override
   void dispose() {
-    // TODO: implement dispose
+    _scrollController.dispose();
     super.dispose();
     kitchenNote.dispose();
     staffNote.dispose();
     paymentNote.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      _loadMoreCategories();
+    }
+  }
+
+  void _fetchCategories() {
+    context.read<CategoryCubit>().getCategories(
+          page: currentPage,
+          limit: limit,
+        );
+  }
+
+  void _loadMoreCategories() {
+    if (!isLoadingMore) {
+      setState(() {
+        isLoadingMore = true;
+        currentPage++;
+      });
+      _fetchCategories();
+    }
   }
 
   @override
@@ -42,7 +85,11 @@ class _POSScreenState extends State<POSScreen> {
             children: [
               // Clear All Button
               TextButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  setState(() {
+                    cartItems.clear();
+                  });
+                },
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear All'),
                 style: TextButton.styleFrom(
@@ -170,40 +217,101 @@ class _POSScreenState extends State<POSScreen> {
             color: Colors.grey.shade100,
             border: Border(right: BorderSide(color: Colors.grey.shade200)),
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildCategoryItem(
-                  'Burgers',
-                  'https://gs1ksa.org:5001/uploads/itemImages/1731154705537-burger.png',
-                  selectedCategory == 'Burgers',
+          child: BlocConsumer<CategoryCubit, CategoryState>(
+            listener: (context, state) {
+              if (state is CategorySuccess) {
+                setState(() {
+                  if (currentPage == 1) {
+                    categories = state.response.categories;
+                  } else {
+                    categories.addAll(state.response.categories);
+                  }
+                  isLoadingMore = false;
+                });
+              }
+            },
+            builder: (context, state) {
+              if (state is CategoryLoading && categories.isEmpty) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(
+                      5, // Number of placeholder items
+                      (index) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Container(
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 60,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ...categories
+                        .map((category) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildCategoryItem(
+                                category.name,
+                                category.image,
+                                selectedCategory == category.name,
+                              ),
+                            ))
+                        .toList(),
+                    if (isLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                _buildCategoryItem(
-                  'Pizza',
-                  'https://gs1ksa.org:5001/uploads/itemImages/1731154705537-burger.png',
-                  selectedCategory == 'Pizza',
-                ),
-                _buildCategoryItem(
-                  'Salad',
-                  'https://gs1ksa.org:5001/uploads/itemImages/1731154705537-burger.png',
-                  selectedCategory == 'Salad',
-                ),
-                _buildCategoryItem(
-                  'Spaghetti',
-                  'https://gs1ksa.org:5001/uploads/itemImages/1731154705537-burger.png',
-                  selectedCategory == 'Spaghetti',
-                ),
-                // Add more categories as needed
-              ],
-            ),
+              );
+            },
           ),
         ),
         // Main content area
         Expanded(
           child: Row(
             children: [
-              // Center area - Products grid
               Expanded(
                 flex: 3,
                 child: Container(
@@ -227,7 +335,7 @@ class _POSScreenState extends State<POSScreen> {
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
-                            childAspectRatio: 0.8,
+                            childAspectRatio: 1,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                           ),
@@ -358,54 +466,47 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  Widget _buildCategoryItem(String title, String imageUrl, bool isSelected) {
-    return InkWell(
+  Widget _buildCategoryItem(String name, String imageUrl, bool isSelected) {
+    return GestureDetector(
       onTap: () {
         setState(() {
-          selectedCategory = title;
+          selectedCategory = name;
         });
       },
       child: Container(
-        width: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : Colors.transparent,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isSelected
-                        ? AppColors.primary.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.2),
-                    spreadRadius: 1,
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
+        decoration: !isSelected
+            ? null
+            : BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: ClipOval(
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                ),
+        width: 100,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.network(
+                imageUrl,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.category,
+                    size: 40,
+                    color: isSelected ? Colors.white : Colors.grey.shade400,
+                  );
+                },
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
-              title,
+              name,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? AppColors.primary : Colors.grey.shade800,
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

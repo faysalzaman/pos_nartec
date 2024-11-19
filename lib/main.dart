@@ -5,6 +5,7 @@ import 'package:pos/cubit/sales/sales_cubit.dart';
 import 'package:flutter/services.dart';
 import 'package:pos/screens/main_dashboard/main_dashboard_screen.dart';
 import 'package:pos/utils/app_preferences.dart';
+import 'package:pos/cubit/category/category_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,7 @@ class MainApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (context) => AuthCubit()),
         BlocProvider(create: (context) => SalesCubit()),
+        BlocProvider(create: (context) => CategoryCubit()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

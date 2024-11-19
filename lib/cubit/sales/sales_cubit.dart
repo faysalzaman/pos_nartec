@@ -24,13 +24,11 @@ class SalesCubit extends Cubit<SalesState> {
       final response = await SalesController.getSalesOrders(
         page: page,
         limit: limit,
-        search: search,
-        orderType: orderType,
-        chef: chef,
-        taker: taker,
-        cashier: cashier,
-        sortBy: sortBy,
-        sortOrder: sortOrder,
+        search: search ?? "",
+        orderType: orderType ?? "",
+        chef: chef ?? "",
+        taker: taker ?? "",
+        cashier: cashier ?? "",
       );
       emit(SalesSuccess(response: response));
     } catch (e) {
