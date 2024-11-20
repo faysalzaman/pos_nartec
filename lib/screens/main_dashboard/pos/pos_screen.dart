@@ -1,7 +1,12 @@
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:pos/cubit/category/category_cubit.dart';
 import 'package:pos/cubit/category/category_state.dart';
+import 'package:pos/cubit/menu_item/menu_item_cubit.dart';
+import 'package:pos/cubit/menu_item/menu_item_state.dart';
 import 'package:pos/model/category/category_model.dart';
+import 'package:pos/model/menu_item/menu_item_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/widgets/card_item_widget.dart';
@@ -20,6 +25,11 @@ class _POSScreenState extends State<POSScreen> {
   List<CartItem> cartItems = [];
   String? selectedCategory;
 
+  // cubit
+  final MenuItemCubit menuCubit = MenuItemCubit();
+
+  final List<MenuItemModel> menuItems = [];
+
   // Notes
   TextEditingController kitchenNote = TextEditingController();
   TextEditingController staffNote = TextEditingController();
@@ -27,21 +37,30 @@ class _POSScreenState extends State<POSScreen> {
 
   // Add these variables
   List<Category> categories = [];
+
   int currentPage = 1;
   final int limit = 10;
+
+  int menuItemPage = 1;
+  final int menuItemLimit = 10;
+
   bool isLoadingMore = false;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _menuScrollController = ScrollController();
+  bool isLoadingMoreMenuItems = false;
 
   @override
   void initState() {
     super.initState();
     _fetchCategories();
     _scrollController.addListener(_onScroll);
+    _menuScrollController.addListener(_onMenuScroll);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _menuScrollController.dispose();
     super.dispose();
     kitchenNote.dispose();
     staffNote.dispose();
@@ -52,6 +71,13 @@ class _POSScreenState extends State<POSScreen> {
     if (_scrollController.position.pixels ==
         _scrollController.position.maxScrollExtent) {
       _loadMoreCategories();
+    }
+  }
+
+  void _onMenuScroll() {
+    if (_menuScrollController.position.pixels ==
+        _menuScrollController.position.maxScrollExtent) {
+      _loadMoreMenuItems();
     }
   }
 
@@ -69,6 +95,20 @@ class _POSScreenState extends State<POSScreen> {
         currentPage++;
       });
       _fetchCategories();
+    }
+  }
+
+  void _loadMoreMenuItems() {
+    if (!isLoadingMoreMenuItems) {
+      setState(() {
+        isLoadingMoreMenuItems = true;
+        menuItemPage++;
+      });
+      menuCubit.getMenuItems(
+        page: menuItemPage,
+        limit: menuItemLimit,
+        category: selectedCategory ?? "",
+      );
     }
   }
 
@@ -221,6 +261,12 @@ class _POSScreenState extends State<POSScreen> {
           child: BlocConsumer<CategoryCubit, CategoryState>(
             listener: (context, state) {
               if (state is CategorySuccess) {
+                // menuCubit.getMenuItems(
+                //   page: menuItemPage,
+                //   limit: menuItemLimit,
+                //   search: "",
+                //   category: categories.first.id,
+                // );
                 setState(() {
                   if (currentPage == 1) {
                     categories = state.response.categories;
@@ -241,16 +287,13 @@ class _POSScreenState extends State<POSScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    ...categories
-                        .map((category) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _buildCategoryItem(
-                                category.name,
-                                category.image,
-                                selectedCategory == category.name,
-                              ),
-                            ))
-                        .toList(),
+                    ...categories.map((category) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildCategoryItem(
+                            category,
+                            selectedCategory == category.id,
+                          ),
+                        )),
                     if (isLoadingMore)
                       const Padding(
                         padding: EdgeInsets.all(8.0),
@@ -290,41 +333,84 @@ class _POSScreenState extends State<POSScreen> {
                     ],
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            childAspectRatio: 1,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
+                  child: BlocConsumer<MenuItemCubit, MenuItemState>(
+                    bloc: menuCubit,
+                    listener: (context, state) {
+                      if (state is MenuItemSuccess) {
+                        setState(() {
+                          if (menuItemPage == 1) {
+                            menuItems.clear();
+                          }
+                          menuItems.addAll(state.response.menuItems);
+                          isLoadingMoreMenuItems = false;
+                        });
+                      } else if (state is MenuItemError) {
+                        setState(() {
+                          isLoadingMoreMenuItems = false;
+                        });
+                        final snackBar = SnackBar(
+                          elevation: 0,
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Colors.transparent,
+                          content: AwesomeSnackbarContent(
+                            title: 'Error!',
+                            message: state.message,
+                            contentType: ContentType.failure,
                           ),
-                          itemCount: 8, // Replace with actual item count
-                          itemBuilder: (context, index) => _buildProductCard(
-                            'Product Name',
-                            'Product Description',
-                            'https://gs1ksa.org:5001/uploads/itemImages/1731154705537-burger.png',
-                            '\$9.99',
+                        );
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(snackBar);
+                      }
+                    },
+                    builder: (context, state) {
+                      if (state is MenuItemLoading && menuItems.isEmpty) {
+                        return const Center(
+                          child: SpinKitFadingCircle(
+                            color: AppColors.primary,
                           ),
+                        );
+                      } else if (menuItems.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'Select a category to view items  ',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        );
+                      }
+                      return GridView.builder(
+                        controller: _menuScrollController,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          childAspectRatio: 1,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
                         ),
-                      ),
-                      // Pagination controls
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            TextButton(
-                                onPressed: () {},
-                                child: const Text('Previous')),
-                            TextButton(
-                                onPressed: () {}, child: const Text('Next')),
-                          ],
-                        ),
-                      ),
-                    ],
+                        itemCount:
+                            menuItems.length + (isLoadingMoreMenuItems ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == menuItems.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: SpinKitFadingCircle(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            );
+                          }
+                          return _buildProductCard(
+                            menuItems[index].name,
+                            menuItems[index].description,
+                            menuItems[index].image,
+                            menuItems[index].price.toString(),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
@@ -428,12 +514,19 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  Widget _buildCategoryItem(String name, String imageUrl, bool isSelected) {
+  Widget _buildCategoryItem(Category category, bool isSelected) {
     return GestureDetector(
       onTap: () {
         setState(() {
-          selectedCategory = name;
+          selectedCategory = category.id;
+          menuItemPage = 1;
+          menuItems.clear();
         });
+        menuCubit.getMenuItems(
+          page: menuItemPage,
+          limit: menuItemLimit,
+          category: selectedCategory ?? "",
+        );
       },
       child: Container(
         decoration: !isSelected
@@ -449,7 +542,7 @@ class _POSScreenState extends State<POSScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(50),
               child: Image.network(
-                imageUrl,
+                category.image,
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
@@ -464,7 +557,7 @@ class _POSScreenState extends State<POSScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              name,
+              category.name,
               style: TextStyle(
                 fontSize: 12,
                 color: isSelected ? Colors.white : Colors.black87,
