@@ -22,9 +22,9 @@ class CartItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       color: Colors.white,
-      margin: const EdgeInsets.all(8),
+      margin: const EdgeInsets.all(4),
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(4),
         child: Column(
           children: [
             Row(
@@ -53,11 +53,28 @@ class CartItemWidget extends StatelessWidget {
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                       const Divider(),
-                      // modifiers will be displayed here
-                      Text(
-                        'Modifiers',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
+                      // Display selected modifiers
+                      if (item.modifiers.isNotEmpty) ...[
+                        Text(
+                          'Selected Modifiers:',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: item.modifiers.map((modifier) {
+                            return Text(
+                              modifier
+                                  .name, // Assuming ModifierModel has a name property
+                              style: TextStyle(color: Colors.grey.shade600),
+                            );
+                          }).toList(),
+                        ),
+                      ] else ...[
+                        Text(
+                          'No modifiers selected',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -82,32 +99,32 @@ class CartItemWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             // Quantity controls in a separate row
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove, size: 20),
+                  icon: const Icon(Icons.remove, size: 16),
                   onPressed: () => onQuantityChanged(item.quantity - 1),
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(2),
                 ),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade300),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${item.quantity}',
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add, size: 20),
+                  icon: const Icon(Icons.add, size: 16),
                   onPressed: () => onQuantityChanged(item.quantity + 1),
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(2),
                 ),
               ],
             ),

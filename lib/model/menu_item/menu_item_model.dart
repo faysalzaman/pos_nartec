@@ -6,7 +6,7 @@ class MenuItemModel {
   final String description;
   final String image;
   final bool status;
-  final List<dynamic> modifiers;
+  final List<ModifierModel> modifiers;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int v;
@@ -33,7 +33,8 @@ class MenuItemModel {
         description: json["description"],
         image: json["image"],
         status: json["status"],
-        modifiers: List<dynamic>.from(json["modifiers"] ?? []),
+        modifiers: List<ModifierModel>.from(
+            (json["modifiers"] ?? []).map((x) => ModifierModel.fromJson(x))),
         createdAt: DateTime.parse(json["createdAt"]),
         updatedAt: DateTime.parse(json["updatedAt"]),
         v: json["__v"],
@@ -101,5 +102,53 @@ class MenuItemResponse {
         "totalPages": totalPages,
         "currentPage": currentPage,
         "totalItems": totalItems,
+      };
+}
+
+class ModifierModel {
+  final String id;
+  final String name;
+  final double price;
+  final String unit;
+  final int stock;
+  final bool status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int v;
+
+  ModifierModel({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.unit,
+    required this.stock,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.v,
+  });
+
+  factory ModifierModel.fromJson(Map<String, dynamic> json) => ModifierModel(
+        id: json["_id"],
+        name: json["name"],
+        price: json["price"]?.toDouble() ?? 0.0,
+        unit: json["unit"],
+        stock: json["stock"],
+        status: json["status"],
+        createdAt: DateTime.parse(json["createdAt"]),
+        updatedAt: DateTime.parse(json["updatedAt"]),
+        v: json["__v"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "_id": id,
+        "name": name,
+        "price": price,
+        "unit": unit,
+        "stock": stock,
+        "status": status,
+        "createdAt": createdAt.toIso8601String(),
+        "updatedAt": updatedAt.toIso8601String(),
+        "__v": v,
       };
 }

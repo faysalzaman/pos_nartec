@@ -29,13 +29,13 @@ class _POSScreenState extends State<POSScreen> {
   final MenuItemCubit menuCubit = MenuItemCubit();
 
   final List<MenuItemModel> menuItems = [];
+  final List<String> modifiersList = [];
 
   // Notes
   TextEditingController kitchenNote = TextEditingController();
   TextEditingController staffNote = TextEditingController();
   TextEditingController paymentNote = TextEditingController();
 
-  // Add these variables
   List<Category> categories = [];
 
   int currentPage = 1;
@@ -55,6 +55,11 @@ class _POSScreenState extends State<POSScreen> {
     _fetchCategories();
     _scrollController.addListener(_onScroll);
     _menuScrollController.addListener(_onMenuScroll);
+    menuCubit.getMenuItems(
+      page: menuItemPage,
+      limit: menuItemLimit,
+      category: "",
+    );
   }
 
   @override
@@ -111,6 +116,8 @@ class _POSScreenState extends State<POSScreen> {
       );
     }
   }
+
+  List<List<String>> selectedModifiers = [];
 
   @override
   Widget build(BuildContext context) {
@@ -407,6 +414,7 @@ class _POSScreenState extends State<POSScreen> {
                             menuItems[index].description,
                             menuItems[index].image,
                             menuItems[index].price.toString(),
+                            menuItems[index].modifiers,
                           );
                         },
                       );
@@ -458,7 +466,7 @@ class _POSScreenState extends State<POSScreen> {
                                 });
                               },
                               onModifier: () {
-                                print('Modifier');
+                                _showModifiersBottomSheet(item.modifiers);
                               },
                               onRemove: () {
                                 setState(() {
@@ -578,6 +586,7 @@ class _POSScreenState extends State<POSScreen> {
     String description,
     String imageUrl,
     String price,
+    List<ModifierModel> modifiers,
   ) {
     return InkWell(
       onTap: () {
@@ -587,6 +596,7 @@ class _POSScreenState extends State<POSScreen> {
             price: double.parse(price.replaceAll('\$', '')),
             imageUrl: imageUrl,
             quantity: 1,
+            modifiers: modifiers,
           ));
         });
       },
@@ -615,6 +625,9 @@ class _POSScreenState extends State<POSScreen> {
                   Text(
                     title,
                     style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    textAlign: TextAlign.left,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -932,6 +945,106 @@ class _POSScreenState extends State<POSScreen> {
       ),
     );
   }
+
+  void _showModifiersBottomSheet(List<ModifierModel> modifiers) {
+    // Create a list to keep track of selected modifiers
+    List<bool> selectedModifiers =
+        List.generate(modifiers.length, (index) => false);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Check if modifiers list is not empty
+                  if (modifiers.isNotEmpty) ...[
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Update food modifiers for\n${modifiers.first.name} /Per Kilo',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Display the modifiers with checkboxes
+                    Column(
+                      children: List.generate(modifiers.length, (index) {
+                        return CheckboxListTile(
+                          title: Text(modifiers[index].name),
+                          subtitle: Text('AED ${modifiers[index].price}'),
+                          value: selectedModifiers[index],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedModifiers[index] = value ?? false;
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'No modifiers available.',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Colors.pink),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Handle the update logic here
+                          // Collect selected modifiers
+                          List<ModifierModel> selected = [];
+                          for (int i = 0; i < modifiers.length; i++) {
+                            if (selectedModifiers[i]) {
+                              selected.add(modifiers[i]);
+                            }
+                          }
+
+                          // Update the cart item with selected modifiers
+                          // Assuming you have a way to identify which cart item to update
+                          // Update the cart item logic here
+
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2C4957),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('Update'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class CartItem {
@@ -939,11 +1052,20 @@ class CartItem {
   final double price;
   final String imageUrl;
   int quantity;
+  final List<ModifierModel> modifiers;
 
-  CartItem({
-    required this.title,
-    required this.price,
-    required this.imageUrl,
-    required this.quantity,
-  });
+  CartItem(
+      {required this.title,
+      required this.price,
+      required this.imageUrl,
+      required this.quantity,
+      required this.modifiers});
+
+  // New constructor to create CartItem from MenuItemModel
+  CartItem.fromMenuItem(MenuItemModel menuItem)
+      : title = menuItem.name,
+        price = menuItem.price,
+        imageUrl = menuItem.image,
+        modifiers = menuItem.modifiers,
+        quantity = 1; // Default quantity to 1
 }
