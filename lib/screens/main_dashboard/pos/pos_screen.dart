@@ -117,7 +117,7 @@ class _POSScreenState extends State<POSScreen> {
     }
   }
 
-  List<List<String>> selectedModifiers = [];
+  List<ModifierModel> selectedModifiers = [];
 
   @override
   Widget build(BuildContext context) {
@@ -410,11 +410,8 @@ class _POSScreenState extends State<POSScreen> {
                             );
                           }
                           return _buildProductCard(
-                            menuItems[index].name,
-                            menuItems[index].description,
-                            menuItems[index].image,
-                            menuItems[index].price.toString(),
                             menuItems[index].modifiers,
+                            menuItems[index],
                           );
                         },
                       );
@@ -466,14 +463,13 @@ class _POSScreenState extends State<POSScreen> {
                                 });
                               },
                               onModifier: () {
-                                _showModifiersBottomSheet(item.modifiers);
+                                _showModifiersBottomSheet(item.modifiers, item);
                               },
                               onRemove: () {
                                 setState(() {
                                   cartItems.removeAt(index);
                                 });
                               },
-                              image: item.imageUrl,
                             );
                           },
                         ),
@@ -582,19 +578,14 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   Widget _buildProductCard(
-    String title,
-    String description,
-    String imageUrl,
-    String price,
     List<ModifierModel> modifiers,
+    MenuItemModel menuItem,
   ) {
     return InkWell(
       onTap: () {
         setState(() {
           cartItems.add(CartItem(
-            title: title,
-            price: double.parse(price.replaceAll('\$', '')),
-            imageUrl: imageUrl,
+            menuItem,
             quantity: 1,
             modifiers: modifiers,
           ));
@@ -611,7 +602,7 @@ class _POSScreenState extends State<POSScreen> {
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(4)),
                   image: DecorationImage(
-                    image: NetworkImage(imageUrl),
+                    image: NetworkImage(menuItem.image),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -623,7 +614,7 @@ class _POSScreenState extends State<POSScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    menuItem.name,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     maxLines: 2,
                     textAlign: TextAlign.left,
@@ -631,7 +622,7 @@ class _POSScreenState extends State<POSScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    price,
+                    '\$${menuItem.price.toString().replaceAll('\$', '')}',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ],
@@ -645,7 +636,7 @@ class _POSScreenState extends State<POSScreen> {
 
   double calculateTotal() {
     return cartItems.fold(
-        0, (total, item) => total + (item.price * item.quantity));
+        0, (total, item) => total + (item.menuItem.price * item.quantity));
   }
 
   void _showNotesDialog() {
@@ -946,7 +937,8 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  void _showModifiersBottomSheet(List<ModifierModel> modifiers) {
+  void _showModifiersBottomSheet(
+      List<ModifierModel> modifiers, CartItem cartItem) {
     // Create a list to keep track of selected modifiers
     List<bool> selectedModifiers =
         List.generate(modifiers.length, (index) => false);
@@ -963,21 +955,17 @@ class _POSScreenState extends State<POSScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Check if modifiers list is not empty
                   if (modifiers.isNotEmpty) ...[
                     Align(
                       alignment: Alignment.center,
                       child: Text(
-                        'Update food modifiers for\n${modifiers.first.name} /Per Kilo',
+                        'Update food modifiers',
                         style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 24, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Display the modifiers with checkboxes
                     Column(
                       children: List.generate(modifiers.length, (index) {
                         return CheckboxListTile(
@@ -993,10 +981,8 @@ class _POSScreenState extends State<POSScreen> {
                       }),
                     ),
                   ] else ...[
-                    const Text(
-                      'No modifiers available.',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    const Text('No modifiers available.',
+                        style: TextStyle(fontSize: 18)),
                   ],
                   const SizedBox(height: 24),
                   Row(
@@ -1004,15 +990,12 @@ class _POSScreenState extends State<POSScreen> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.pink),
-                        ),
+                        child: const Text('Cancel',
+                            style: TextStyle(color: Colors.pink)),
                       ),
                       const SizedBox(width: 16),
                       ElevatedButton(
                         onPressed: () {
-                          // Handle the update logic here
                           // Collect selected modifiers
                           List<ModifierModel> selected = [];
                           for (int i = 0; i < modifiers.length; i++) {
@@ -1022,9 +1005,12 @@ class _POSScreenState extends State<POSScreen> {
                           }
 
                           // Update the cart item with selected modifiers
-                          // Assuming you have a way to identify which cart item to update
-                          // Update the cart item logic here
+                          setState(() {
+                            cartItem.selectedModifiers.clear();
+                            cartItem.selectedModifiers.addAll(selected);
+                          });
 
+                          // Notify the parent widget to rebuild
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -1048,24 +1034,29 @@ class _POSScreenState extends State<POSScreen> {
 }
 
 class CartItem {
-  final String title;
-  final double price;
-  final String imageUrl;
+  final MenuItemModel menuItem;
   int quantity;
-  final List<ModifierModel> modifiers;
+  final List<ModifierModel> modifiers; // All modifiers
+  List<ModifierModel> selectedModifiers; // Change to mutable list
 
   CartItem(
-      {required this.title,
-      required this.price,
-      required this.imageUrl,
-      required this.quantity,
-      required this.modifiers});
+    this.menuItem, {
+    required this.quantity,
+    required this.modifiers,
+    List<ModifierModel>? selectedModifiers, // Accept as a parameter
+  }) : selectedModifiers =
+            selectedModifiers ?? []; // Initialize as an empty list if null
 
   // New constructor to create CartItem from MenuItemModel
-  CartItem.fromMenuItem(MenuItemModel menuItem)
-      : title = menuItem.name,
-        price = menuItem.price,
-        imageUrl = menuItem.image,
-        modifiers = menuItem.modifiers,
-        quantity = 1; // Default quantity to 1
+  CartItem.fromMenuItem(this.menuItem)
+      : modifiers = menuItem.modifiers,
+        quantity = 1, // Default quantity to 1
+        selectedModifiers = []; // Initialize as an empty list
+
+  // Method to get selected modifiers from the instance variable
+  List<ModifierModel>? getSelectedModifiers() {
+    return selectedModifiers.isNotEmpty
+        ? selectedModifiers
+        : null; // Return null if no modifiers are selected
+  }
 }
