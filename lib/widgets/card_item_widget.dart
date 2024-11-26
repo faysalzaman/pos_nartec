@@ -23,6 +23,21 @@ class CartItemWidget extends StatefulWidget {
 class _CartItemWidgetState extends State<CartItemWidget> {
   @override
   Widget build(BuildContext context) {
+    // Calculate total price including modifiers
+    double modifiersTotal = widget.item.selectedModifiers.fold(
+      0.0,
+      (total, modifier) => total + modifier.price,
+    );
+
+    double totalPrice =
+        (widget.item.menuItem.price * widget.item.quantity) + modifiersTotal;
+
+    double itemPrice = widget.item.menuItem.price * widget.item.quantity;
+
+    double oneItemPrice = widget.item.menuItem.price;
+
+    double oneItemPricePlusModifiers = oneItemPrice + modifiersTotal;
+
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.all(4),
@@ -52,14 +67,30 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(
-                        '\$${(widget.item.menuItem.price * widget.item.quantity).toStringAsFixed(2)}',
+                        '\$${widget.item.menuItem.price.toStringAsFixed(2)} - Item price',
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
+                      modifiersTotal > 0.00
+                          ? Text(
+                              '\$${modifiersTotal.toStringAsFixed(2)} - ${widget.item.selectedModifiers.map((modifier) => modifier.name).join(', ')}', // Show total price
+                              style: TextStyle(color: Colors.grey.shade600),
+                            )
+                          : Container(),
+                      if (modifiersTotal > 0) ...[
+                        Text(
+                          'Item price + modifiers: \$${oneItemPricePlusModifiers.toStringAsFixed(2)}', // Show modifiers total
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        Text(
+                          'Total: \$${totalPrice.toStringAsFixed(2)}', // Show modifiers total
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
                       const Divider(),
                       // Display selected modifiers
                       if (widget.item.selectedModifiers.isNotEmpty) ...[
                         Text(
-                          'Selected Modifiers:',
+                          'Modifiers:',
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                         Column(

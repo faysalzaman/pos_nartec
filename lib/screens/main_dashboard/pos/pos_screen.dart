@@ -119,6 +119,17 @@ class _POSScreenState extends State<POSScreen> {
 
   List<ModifierModel> selectedModifiers = [];
 
+  // Method to update the cart item when modifiers are selected
+  void updateCartItem(CartItem updatedItem) {
+    setState(() {
+      // Find the index of the item in the cart and update it
+      int index = cartItems.indexOf(updatedItem);
+      if (index != -1) {
+        cartItems[index] = updatedItem;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -940,8 +951,10 @@ class _POSScreenState extends State<POSScreen> {
   void _showModifiersBottomSheet(
       List<ModifierModel> modifiers, CartItem cartItem) {
     // Create a list to keep track of selected modifiers
-    List<bool> selectedModifiers =
-        List.generate(modifiers.length, (index) => false);
+    List<bool> selectedModifiers = List.generate(modifiers.length, (index) {
+      // Check if the modifier is already selected
+      return cartItem.selectedModifiers.contains(modifiers[index]);
+    });
 
     showModalBottomSheet(
       context: context,
@@ -956,11 +969,11 @@ class _POSScreenState extends State<POSScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (modifiers.isNotEmpty) ...[
-                    Align(
+                    const Align(
                       alignment: Alignment.center,
                       child: Text(
                         'Update food modifiers',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
@@ -972,6 +985,8 @@ class _POSScreenState extends State<POSScreen> {
                           title: Text(modifiers[index].name),
                           subtitle: Text('AED ${modifiers[index].price}'),
                           value: selectedModifiers[index],
+                          activeColor:
+                              AppColors.primary, // Set the checked color
                           onChanged: (bool? value) {
                             setState(() {
                               selectedModifiers[index] = value ?? false;
@@ -1012,6 +1027,8 @@ class _POSScreenState extends State<POSScreen> {
 
                           // Notify the parent widget to rebuild
                           Navigator.pop(context);
+                          // Trigger a rebuild of the CartItemWidget
+                          updateCartItem(cartItem);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2C4957),
