@@ -646,8 +646,14 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   double calculateTotal() {
-    return cartItems.fold(
-        0, (total, item) => total + (item.menuItem.price * item.quantity));
+    return cartItems.fold(0, (total, item) {
+      // Calculate the total for each item including modifiers
+      double modifiersTotal = item.selectedModifiers
+          .fold(0.0, (sum, modifier) => sum + modifier.price);
+      return total +
+          (item.menuItem.price * item.quantity) +
+          (modifiersTotal * item.quantity);
+    });
   }
 
   void _showNotesDialog() {

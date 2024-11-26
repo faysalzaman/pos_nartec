@@ -29,10 +29,8 @@ class _CartItemWidgetState extends State<CartItemWidget> {
       (total, modifier) => total + modifier.price,
     );
 
-    double totalPrice =
-        (widget.item.menuItem.price * widget.item.quantity) + modifiersTotal;
-
-    double itemPrice = widget.item.menuItem.price * widget.item.quantity;
+    double totalPrice = (widget.item.menuItem.price * widget.item.quantity) +
+        (modifiersTotal * widget.item.quantity);
 
     double oneItemPrice = widget.item.menuItem.price;
 
@@ -67,22 +65,19 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text(
-                        '\$${widget.item.menuItem.price.toStringAsFixed(2)} - Item price',
+                        '\$${widget.item.menuItem.price.toStringAsFixed(2)}',
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                       modifiersTotal > 0.00
                           ? Text(
-                              '\$${modifiersTotal.toStringAsFixed(2)} - ${widget.item.selectedModifiers.map((modifier) => modifier.name).join(', ')}', // Show total price
+                              '\$${modifiersTotal.toStringAsFixed(2)}', // Show total price
                               style: TextStyle(color: Colors.grey.shade600),
                             )
                           : Container(),
+                      modifiersTotal > 0.00 ? Text("----------") : Container(),
                       if (modifiersTotal > 0) ...[
                         Text(
-                          'Item price + modifiers: \$${oneItemPricePlusModifiers.toStringAsFixed(2)}', // Show modifiers total
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        Text(
-                          'Total: \$${totalPrice.toStringAsFixed(2)}', // Show modifiers total
+                          '\$${totalPrice.toStringAsFixed(2)} - Total', // Ensure this reflects the correct total
                           style: const TextStyle(color: Colors.red),
                         ),
                       ],
