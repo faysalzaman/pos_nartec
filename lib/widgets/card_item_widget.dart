@@ -32,10 +32,6 @@ class _CartItemWidgetState extends State<CartItemWidget> {
     double totalPrice = (widget.item.menuItem.price * widget.item.quantity) +
         (modifiersTotal * widget.item.quantity);
 
-    double oneItemPrice = widget.item.menuItem.price;
-
-    double oneItemPricePlusModifiers = oneItemPrice + modifiersTotal;
-
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.all(4),
