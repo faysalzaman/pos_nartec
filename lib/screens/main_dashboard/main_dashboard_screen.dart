@@ -29,9 +29,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       drawer: LayoutBuilder(
         builder: (context, constraints) {
           final isMediumTablet = MediaQuery.of(context).size.width >= 800;
-          final iconSize = isMediumTablet ? 24.0 : 20.0;
-          final fontSize = isMediumTablet ? 16.0 : 14.0;
-          final paddingSize = isMediumTablet ? 24.0 : 16.0;
+          final iconSize = isMediumTablet ? 22.0 : 18.0;
+          final fontSize = isMediumTablet ? 14.0 : 12.0;
+          final paddingSize = isMediumTablet ? 22.0 : 14.0;
 
           return Drawer(
             backgroundColor: AppColors.primary,
@@ -247,10 +247,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _currentScreen = const DashboardScreen();
                 break;
               case 'Sales':
-                _currentScreen = SalesOrdersScreen();
+                _currentScreen = const SalesOrdersScreen();
                 break;
               case 'POS':
-                _currentScreen = POSScreen();
+                _currentScreen = const POSScreen();
                 break;
               case 'Kitchen':
                 _currentScreen = const KitchenScreen();

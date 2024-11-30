@@ -1,3 +1,5 @@
+// ignore_for_file: unrelated_type_equality_checks
+
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -5,11 +7,13 @@ import 'package:pos/cubit/category/category_cubit.dart';
 import 'package:pos/cubit/category/category_state.dart';
 import 'package:pos/cubit/menu_item/menu_item_cubit.dart';
 import 'package:pos/cubit/menu_item/menu_item_state.dart';
+import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/model/category/category_model.dart';
 import 'package:pos/model/menu_item/menu_item_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/widgets/card_item_widget.dart';
+import 'package:pos/widgets/orders_in_process_bottom_sheet.dart';
 import 'package:pos/widgets/placeholders/category_placeholder.dart';
 
 class POSScreen extends StatefulWidget {
@@ -20,8 +24,9 @@ class POSScreen extends StatefulWidget {
 }
 
 class _POSScreenState extends State<POSScreen> {
-  String? orderTypeValue;
+  String orderTypeValue = 'Dining';
   final List<String> orderTypeList = ['Dining', 'Takeaway', 'Delivery'];
+
   List<CartItem> cartItems = [];
   String? selectedCategory;
 
@@ -60,6 +65,9 @@ class _POSScreenState extends State<POSScreen> {
       limit: menuItemLimit,
       category: "",
     );
+    context.read<StatusCubit>().getOrderByStatus(status: "pending");
+    context.read<StatusCubit>().getOrderByStatus(status: "preparing");
+    context.read<StatusCubit>().getOrderByStatus(status: "ready");
   }
 
   @override
@@ -95,11 +103,14 @@ class _POSScreenState extends State<POSScreen> {
 
   void _loadMoreCategories() {
     if (!isLoadingMore) {
-      setState(() {
-        isLoadingMore = true;
-        currentPage++;
-      });
+      isLoadingMore = true; // Update the flag without rebuilding
       _fetchCategories();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          isLoadingMore = false;
+          currentPage++;
+        });
+      });
     }
   }
 
@@ -130,402 +141,430 @@ class _POSScreenState extends State<POSScreen> {
     });
   }
 
+  void _showOrdersInProcess() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return OrdersInProcessBottomSheet(
+          pendingList: context.read<StatusCubit>().pendingStatusList,
+          preparingList: context.read<StatusCubit>().preparingStatusList,
+          readyList: context.read<StatusCubit>().readyStatusList,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-          ),
-          child: Row(
-            children: [
-              // Clear All Button
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    cartItems.clear();
-                  });
-                },
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear All'),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFE91E63),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Scaffold(
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Row(
+              children: [
+                // Clear All Button
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      cartItems.clear();
+                    });
+                  },
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear All'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFE91E63),
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // All Orders Button
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.list),
-                label: const Text('All orders'),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFF2C4957),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                const SizedBox(width: 8),
+                // All Orders Button
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.list),
+                  label: const Text('All orders'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF2C4957),
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Order Type Dropdown
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.grey.shade200),
+                const SizedBox(width: 16),
+                // Order Type Dropdown
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      hint: Text(
+                        'Select order type',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      value: orderTypeValue,
+                      items: orderTypeList.map((String item) {
+                        return DropdownMenuItem(
+                          value: item,
+                          child: Text(item),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) {
+                        setState(() {
+                          orderTypeValue = value!;
+                        });
+                      },
+                      dropdownColor: Colors.white,
+                      icon: Icon(Icons.keyboard_arrow_down,
+                          color: Colors.grey.shade600),
+                    ),
+                  ),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    hint: Text(
-                      'Select order type',
-                      style: TextStyle(
+                const SizedBox(width: 16),
+                // Search TextField
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search product by names',
+                      hintStyle: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
                       ),
-                    ),
-                    value: orderTypeValue,
-                    items: orderTypeList.map((String item) {
-                      return DropdownMenuItem(
-                        value: item,
-                        child: Text(item),
-                      );
-                    }).toList(),
-                    onChanged: (String? value) {
-                      setState(() {
-                        orderTypeValue = value;
-                      });
-                    },
-                    dropdownColor: Colors.white,
-                    icon: Icon(Icons.keyboard_arrow_down,
-                        color: Colors.grey.shade600),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Search TextField
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search product by names',
-                    hintStyle: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(4),
-                      borderSide: BorderSide.none,
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Action Buttons
-              TextButton.icon(
-                onPressed: _showNotesDialog,
-                icon: const Icon(Icons.note),
-                label: const Text('Notes'),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.grey.shade100,
-                  foregroundColor: Colors.black87,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                const SizedBox(width: 16),
+                // Action Buttons
+                TextButton.icon(
+                  onPressed: _showNotesDialog,
+                  icon: const Icon(Icons.note),
+                  label: const Text('Notes'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                    foregroundColor: Colors.black87,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: _showInProcessDialog,
-                icon: const Icon(Icons.pending),
-                label: const Text('In Process'),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.grey.shade100,
-                  foregroundColor: Colors.black87,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: _showOrdersInProcess,
+                  icon: const Icon(Icons.pending),
+                  label: const Text('In Process'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                    foregroundColor: Colors.black87,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.check),
-                label: const Text('Submit'),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.check),
+                  label: const Text('Submit'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF00C853),
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        // Categories
-        Container(
-          height: 100,
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            border: Border(right: BorderSide(color: Colors.grey.shade200)),
-          ),
-          child: BlocConsumer<CategoryCubit, CategoryState>(
-            listener: (context, state) {
-              if (state is CategorySuccess) {
-                // menuCubit.getMenuItems(
-                //   page: menuItemPage,
-                //   limit: menuItemLimit,
-                //   search: "",
-                //   category: categories.first.id,
-                // );
-                setState(() {
-                  if (currentPage == 1) {
-                    categories = state.response.categories;
-                  } else {
-                    categories.addAll(state.response.categories);
-                  }
-                  isLoadingMore = false;
-                });
-              }
-            },
-            builder: (context, state) {
-              if (state is CategoryLoading && categories.isEmpty) {
-                return const CategoryPlaceholderWidget();
-              }
+          // Categories
+          Container(
+            height: 100,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              border: Border(right: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: BlocConsumer<CategoryCubit, CategoryState>(
+              listener: (context, state) {
+                if (state is CategorySuccess) {
+                  // menuCubit.getMenuItems(
+                  //   page: menuItemPage,
+                  //   limit: menuItemLimit,
+                  //   search: "",
+                  //   category: categories.first.id,
+                  // );
+                  setState(() {
+                    if (currentPage == 1) {
+                      categories = state.response.categories;
+                    } else {
+                      categories.addAll(state.response.categories);
+                    }
+                    isLoadingMore = false;
+                  });
+                }
+              },
+              builder: (context, state) {
+                if (state is CategoryLoading && categories.isEmpty) {
+                  return const CategoryPlaceholderWidget();
+                }
 
-              return SingleChildScrollView(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ...categories.map((category) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _buildCategoryItem(
-                            category,
-                            selectedCategory == category.id,
-                          ),
-                        )),
-                    if (isLoadingMore)
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                return SingleChildScrollView(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ...categories.map((category) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildCategoryItem(
+                              category,
+                              selectedCategory == category.id,
+                            ),
+                          )),
+                      if (isLoadingMore)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        // Main content area
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border:
-                        Border(right: BorderSide(color: Colors.grey.shade200)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.shade200,
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                      ),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: BlocConsumer<MenuItemCubit, MenuItemState>(
-                    bloc: menuCubit,
-                    listener: (context, state) {
-                      if (state is MenuItemSuccess) {
-                        setState(() {
-                          if (menuItemPage == 1) {
-                            menuItems.clear();
-                          }
-                          menuItems.addAll(state.response.menuItems);
-                          isLoadingMoreMenuItems = false;
-                        });
-                      } else if (state is MenuItemError) {
-                        setState(() {
-                          isLoadingMoreMenuItems = false;
-                        });
-                        final snackBar = SnackBar(
-                          elevation: 0,
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: Colors.transparent,
-                          content: AwesomeSnackbarContent(
-                            title: 'Error!',
-                            message: state.message,
-                            contentType: ContentType.failure,
-                          ),
-                        );
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(snackBar);
-                      }
-                    },
-                    builder: (context, state) {
-                      if (state is MenuItemLoading && menuItems.isEmpty) {
-                        return const Center(
-                          child: SpinKitFadingCircle(
-                            color: AppColors.primary,
-                          ),
-                        );
-                      } else if (menuItems.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'Select a category to view items  ',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
+                );
+              },
+            ),
+          ),
+          // Main content area
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                          right: BorderSide(color: Colors.grey.shade200)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade200,
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: BlocConsumer<MenuItemCubit, MenuItemState>(
+                      bloc: menuCubit,
+                      listener: (context, state) {
+                        if (state is MenuItemSuccess) {
+                          setState(() {
+                            if (menuItemPage == 1) {
+                              menuItems.clear();
+                            }
+                            menuItems.addAll(state.response.menuItems);
+                            isLoadingMoreMenuItems = false;
+                          });
+                        } else if (state is MenuItemError) {
+                          setState(() {
+                            isLoadingMoreMenuItems = false;
+                          });
+                          final snackBar = SnackBar(
+                            elevation: 0,
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.transparent,
+                            content: AwesomeSnackbarContent(
+                              title: 'Error!',
+                              message: state.message,
+                              contentType: ContentType.failure,
                             ),
-                          ),
-                        );
-                      }
-                      return GridView.builder(
-                        controller: _menuScrollController,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          childAspectRatio: 1,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount:
-                            menuItems.length + (isLoadingMoreMenuItems ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == menuItems.length) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: SpinKitFadingCircle(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            );
-                          }
-                          return _buildProductCard(
-                            menuItems[index].modifiers,
-                            menuItems[index],
                           );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-              // Right sidebar - Cart
-              Expanded(
-                flex: 2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border:
-                        Border(left: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Column(
-                    children: [
-                      // Cart header
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border(
-                              bottom: BorderSide(color: Colors.grey.shade200)),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Select Customer'),
-                            Text('Select Table'),
-                          ],
-                        ),
-                      ),
-                      // Cart items
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: cartItems.length,
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(snackBar);
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is MenuItemLoading && menuItems.isEmpty) {
+                          return const Center(
+                            child: SpinKitFadingCircle(
+                              color: AppColors.primary,
+                            ),
+                          );
+                        } else if (menuItems.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Select a category to view items  ',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          );
+                        }
+                        return GridView.builder(
+                          controller: _menuScrollController,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            childAspectRatio: 1,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: menuItems.length +
+                              (isLoadingMoreMenuItems ? 1 : 0),
                           itemBuilder: (context, index) {
-                            final item = cartItems[index];
-                            return CartItemWidget(
-                              item: item,
-                              onQuantityChanged: (newQuantity) {
-                                setState(() {
-                                  if (newQuantity > 0) {
-                                    cartItems[index].quantity = newQuantity;
-                                  } else {
-                                    cartItems.removeAt(index);
-                                  }
-                                });
-                              },
-                              onModifier: () {
-                                _showModifiersBottomSheet(item.modifiers, item);
-                              },
-                              onRemove: () {
-                                setState(() {
-                                  cartItems.removeAt(index);
-                                });
-                              },
+                            if (index == menuItems.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: SpinKitFadingCircle(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              );
+                            }
+                            return _buildProductCard(
+                              menuItems[index].modifiers,
+                              menuItems[index],
                             );
                           },
-                        ),
-                      ),
-                      // Cart total
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border(
-                              top: BorderSide(color: Colors.grey.shade200)),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                // Right sidebar - Cart
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border:
+                          Border(left: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: Column(
+                      children: [
+                        // Cart header
+                        Container(
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.tertiary,
-                            borderRadius: BorderRadius.circular(4),
+                            border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.grey.shade200)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Total:',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                '\$${calculateTotal().toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                ),
+                              const Text('Select Customer'),
+                              GestureDetector(
+                                onTap: () async {
+                                  if (orderTypeValue == "Dining") {
+                                  } else if (orderTypeValue == "Takeaway") {
+                                  } else {}
+                                },
+                                child: orderTypeValue == "Dining"
+                                    ? const Text('Select Table')
+                                    : orderTypeValue == "Takeaway"
+                                        ? const Text("Select Pickup")
+                                        : const Text("Select Shipping (Opt)"),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                        // Cart items
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: cartItems.length,
+                            itemBuilder: (context, index) {
+                              final item = cartItems[index];
+                              return CartItemWidget(
+                                item: item,
+                                onQuantityChanged: (newQuantity) {
+                                  setState(() {
+                                    if (newQuantity > 0) {
+                                      cartItems[index].quantity = newQuantity;
+                                    } else {
+                                      cartItems.removeAt(index);
+                                    }
+                                  });
+                                },
+                                onModifier: () {
+                                  _showModifiersBottomSheet(
+                                      item.modifiers, item);
+                                },
+                                onRemove: () {
+                                  setState(() {
+                                    cartItems.removeAt(index);
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        // Cart total
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border(
+                                top: BorderSide(color: Colors.grey.shade200)),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.tertiary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total:',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '\$${calculateTotal().toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -626,7 +665,8 @@ class _POSScreenState extends State<POSScreen> {
                 children: [
                   Text(
                     menuItem.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12),
                     maxLines: 2,
                     textAlign: TextAlign.left,
                     overflow: TextOverflow.ellipsis,
@@ -634,7 +674,9 @@ class _POSScreenState extends State<POSScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '\$${menuItem.price.toString().replaceAll('\$', '')}',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(
+                      color: Colors.pink,
+                    ),
                   ),
                 ],
               ),
@@ -800,157 +842,6 @@ class _POSScreenState extends State<POSScreen> {
           ),
         );
       },
-    );
-  }
-
-  void _showInProcessDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Orders in process',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Tab buttons
-                Row(
-                  children: [
-                    _buildTabButton(
-                      icon: Icons.pending,
-                      label: 'Pending',
-                      count: '0',
-                      color: Colors.orange,
-                      onPressed: () {
-                        setState(() {
-                          print('Pending');
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    _buildTabButton(
-                      icon: Icons.restaurant,
-                      label: 'Preparing',
-                      count: '0',
-                      color: Colors.blue[900]!,
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 16),
-                    _buildTabButton(
-                      icon: Icons.check_circle,
-                      label: 'Ready',
-                      count: '32',
-                      color: Colors.green,
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Orders list
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: 5, // Replace with actual orders count
-                    itemBuilder: (context, index) => _buildOrderItem(),
-                  ),
-                ),
-                // Close button
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Close',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTabButton({
-    required IconData icon,
-    required String label,
-    required String count,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(label),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                count,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderItem() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Order #241107265904',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text('Progress: 100%'),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text('Type: takeaway (Est incididunt dolo)'),
-          Text('Customer: Guest'),
-          Text('Created at: 11/7/2024, 11:12:12 AM'),
-          Text('Last updated at: 11/7/2024, 11:12:46 AM'),
-        ],
-      ),
     );
   }
 
