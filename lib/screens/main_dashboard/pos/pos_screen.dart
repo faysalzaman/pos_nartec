@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:pos/cubit/category/category_cubit.dart';
 import 'package:pos/cubit/category/category_state.dart';
+import 'package:pos/cubit/customer/customer_cubit.dart';
+import 'package:pos/cubit/customer/customer_state.dart';
 import 'package:pos/cubit/menu_item/menu_item_cubit.dart';
 import 'package:pos/cubit/menu_item/menu_item_state.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/model/category/category_model.dart';
+import 'package:pos/model/customer/customer_model.dart';
 import 'package:pos/model/menu_item/menu_item_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,6 +43,7 @@ class _POSScreenState extends State<POSScreen> {
   TextEditingController kitchenNote = TextEditingController();
   TextEditingController staffNote = TextEditingController();
   TextEditingController paymentNote = TextEditingController();
+  TextEditingController customerSearch = TextEditingController();
 
   List<Category> categories = [];
 
@@ -53,6 +57,11 @@ class _POSScreenState extends State<POSScreen> {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _menuScrollController = ScrollController();
   bool isLoadingMoreMenuItems = false;
+
+  // Add a variable to hold the selected customer
+  CustomerModel?
+      selectedCustomer; // Assuming CustomerModel is the type of your customer
+  bool isGuest = false; // Flag to indicate if the user is a guest
 
   @override
   void initState() {
@@ -144,6 +153,7 @@ class _POSScreenState extends State<POSScreen> {
   void _showOrdersInProcess() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
         return OrdersInProcessBottomSheet(
           pendingList: context.read<StatusCubit>().pendingStatusList,
@@ -477,7 +487,19 @@ class _POSScreenState extends State<POSScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Select Customer'),
+                              GestureDetector(
+                                onTap: _showCustomerSelectionBottomSheet,
+                                child: Text(
+                                  selectedCustomer != null || isGuest
+                                      ? 'Customer is:\n${selectedCustomer?.name ?? 'Guest'}'
+                                      : 'Select Customer',
+                                  style: TextStyle(
+                                    color: selectedCustomer != null || isGuest
+                                        ? Colors.green
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ),
                               GestureDetector(
                                 onTap: () async {
                                   if (orderTypeValue == "Dining") {
@@ -495,32 +517,36 @@ class _POSScreenState extends State<POSScreen> {
                         ),
                         // Cart items
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: cartItems.length,
-                            itemBuilder: (context, index) {
-                              final item = cartItems[index];
-                              return CartItemWidget(
-                                item: item,
-                                onQuantityChanged: (newQuantity) {
-                                  setState(() {
-                                    if (newQuantity > 0) {
-                                      cartItems[index].quantity = newQuantity;
-                                    } else {
+                          child: SingleChildScrollView(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              itemCount: cartItems.length,
+                              itemBuilder: (context, index) {
+                                final item = cartItems[index];
+                                return CartItemWidget(
+                                  item: item,
+                                  onQuantityChanged: (newQuantity) {
+                                    setState(() {
+                                      if (newQuantity > 0) {
+                                        cartItems[index].quantity = newQuantity;
+                                      } else {
+                                        cartItems.removeAt(index);
+                                      }
+                                    });
+                                  },
+                                  onModifier: () {
+                                    _showModifiersBottomSheet(
+                                        item.modifiers, item);
+                                  },
+                                  onRemove: () {
+                                    setState(() {
                                       cartItems.removeAt(index);
-                                    }
-                                  });
-                                },
-                                onModifier: () {
-                                  _showModifiersBottomSheet(
-                                      item.modifiers, item);
-                                },
-                                onRemove: () {
-                                  setState(() {
-                                    cartItems.removeAt(index);
-                                  });
-                                },
-                              );
-                            },
+                                    });
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         ),
                         // Cart total
@@ -565,6 +591,207 @@ class _POSScreenState extends State<POSScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCustomerSelectionBottomSheet() {
+    CustomerCubit.get(context).customerList = [];
+    showModalBottomSheet(
+      backgroundColor: Colors.white,
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return BlocConsumer<CustomerCubit, CustomerState>(
+          listener: (context, state) {
+            if (state is CustomerSuccess) {
+              setState(() {
+                CustomerCubit.get(context).customerList = state.response;
+              });
+            }
+          },
+          builder: (context, state) {
+            return SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Select Customer',
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    // Display selected customer information or "Guest"
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedCustomer != null
+                                ? 'Selected Customer:'
+                                : 'Guest',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          if (selectedCustomer != null) ...[
+                            Text('Name: ${selectedCustomer!.name}'),
+                            Text('Phone: ${selectedCustomer!.phone}'),
+                            Text('Email: ${selectedCustomer!.email}'),
+                            Text('Address: ${selectedCustomer!.address}'),
+                          ] else ...[
+                            const Text('You are continuing as a guest.'),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Search TextField
+                    TextField(
+                      controller: customerSearch,
+                      onChanged: (value) {
+                        if (value.isEmpty) {
+                          if (customerSearch.text.isNotEmpty) {
+                            CustomerCubit.get(context).customerList = [];
+                          }
+                        } else {
+                          CustomerCubit.get(context).searchCustomer(value);
+                        }
+                      },
+                      onEditingComplete: () {
+                        if (customerSearch.text.isEmpty) {
+                          CustomerCubit.get(context).customerList = [];
+                        } else {
+                          CustomerCubit.get(context)
+                              .searchCustomer(customerSearch.text);
+                        }
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'Search for existing customer',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Customer list
+                    if (state is CustomerError)
+                      const Text(
+                        'No customers found. Try a different search or add a new customer.',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      )
+                    else if (CustomerCubit.get(context).customerList.isEmpty)
+                      const Text(
+                        'Search for existing customer or add a new one',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        itemCount:
+                            CustomerCubit.get(context).customerList.length,
+                        itemBuilder: (context, index) {
+                          final customer =
+                              CustomerCubit.get(context).customerList[index];
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedCustomer =
+                                    customer; // Save the selected customer
+                                isGuest =
+                                    false; // Set isGuest to false when a customer is selected
+                              });
+                              Navigator.pop(context); // Close the bottom sheet
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.person, size: 40),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(customer.name,
+                                            style:
+                                                const TextStyle(fontSize: 18)),
+                                        Text(customer.phone,
+                                            style: const TextStyle(
+                                                color: Colors.grey)),
+                                        Text(customer.email,
+                                            style: const TextStyle(
+                                                color: Colors.grey)),
+                                        Text(customer.address,
+                                            style: const TextStyle(
+                                                color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                    // Continue as Guest Button
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedCustomer =
+                              null; // Set selectedCustomer to null
+                          isGuest =
+                              true; // Set isGuest to true when continuing as guest
+                        });
+                        Navigator.pop(context); // Close the bottom sheet
+                      },
+                      child: const Text(
+                        'Continue as Guest',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel',
+                              style: TextStyle(color: Colors.pink)),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Done'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -674,7 +901,7 @@ class _POSScreenState extends State<POSScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '\$${menuItem.price.toString().replaceAll('\$', '')}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.pink,
                     ),
                   ),
@@ -855,6 +1082,7 @@ class _POSScreenState extends State<POSScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {

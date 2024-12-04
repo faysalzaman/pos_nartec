@@ -214,7 +214,9 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
                                             height: 50,
                                           )),
                                           DataCell(
-                                              Text(order.customer?.name ?? '')),
+                                            Text(order.customer?.name ??
+                                                'Unknown Customer'),
+                                          ),
                                           DataCell(
                                               Text(order.items.toString())),
                                           DataCell(
@@ -374,7 +376,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> {
         Text(label),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          value: value.isNotEmpty ? value : null,
           dropdownColor: Colors.white,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),

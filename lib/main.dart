@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/cubit/auth/auth_cubit.dart';
+import 'package:pos/cubit/customer/customer_cubit.dart';
 import 'package:pos/cubit/sales/sales_cubit.dart';
 import 'package:flutter/services.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
@@ -30,6 +31,7 @@ class MainApp extends StatelessWidget {
         BlocProvider(create: (context) => SalesCubit()),
         BlocProvider(create: (context) => CategoryCubit()),
         BlocProvider(create: (context) => StatusCubit()),
+        BlocProvider(create: (context) => CustomerCubit()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -40,21 +42,6 @@ class MainApp extends StatelessWidget {
             iconTheme: IconThemeData(color: Colors.white),
           ),
         ),
-        builder: (context, child) {
-          // Check if the device is a tablet
-          final bool isTablet = MediaQuery.of(context).size.shortestSide >= 600;
-
-          if (isTablet) {
-            // Allow rotation for tablets
-            SystemChrome.setPreferredOrientations([
-              DeviceOrientation.landscapeLeft,
-              DeviceOrientation.landscapeRight,
-              DeviceOrientation.portraitUp,
-              DeviceOrientation.portraitDown,
-            ]);
-          }
-          return child!;
-        },
         home: const MainDashboardScreen(),
       ),
     );
