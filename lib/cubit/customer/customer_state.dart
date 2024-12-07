@@ -17,3 +17,13 @@ class CustomerError extends CustomerState {
 
   CustomerError({required this.message});
 }
+
+class CustomerAddedLoading extends CustomerState {}
+
+class CustomerAdded extends CustomerState {}
+
+class CustomerAddedError extends CustomerState {
+  final String message;
+
+  CustomerAddedError({required this.message});
+}

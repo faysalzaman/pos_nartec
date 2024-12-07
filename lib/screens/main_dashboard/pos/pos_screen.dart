@@ -1,4 +1,4 @@
-// ignore_for_file: unrelated_type_equality_checks
+// ignore_for_file: unrelated_type_equality_checks, use_build_context_synchronously
 
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
@@ -167,6 +167,8 @@ class _POSScreenState extends State<POSScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true, // Ensure this is set to true
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Container(
@@ -623,34 +625,42 @@ class _POSScreenState extends State<POSScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Display selected customer information or "Guest"
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedCustomer != null
-                                ? 'Selected Customer:'
-                                : 'Guest',
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                    isGuest || selectedCustomer == null
+                        ? const SizedBox()
+                        : Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  selectedCustomer != null
+                                      ? 'Selected Customer:'
+                                      : isGuest
+                                          ? 'You are continuing as a guest.'
+                                          : '',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                if (selectedCustomer != null) ...[
+                                  Text('Name: ${selectedCustomer!.name}'),
+                                  Text('Phone: ${selectedCustomer!.phone}'),
+                                  Text('Email: ${selectedCustomer!.email}'),
+                                  Text('Address: ${selectedCustomer!.address}'),
+                                ] else ...[
+                                  isGuest
+                                      ? const Text(
+                                          'You are continuing as a guest.')
+                                      : const SizedBox(),
+                                ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          if (selectedCustomer != null) ...[
-                            Text('Name: ${selectedCustomer!.name}'),
-                            Text('Phone: ${selectedCustomer!.phone}'),
-                            Text('Email: ${selectedCustomer!.email}'),
-                            Text('Address: ${selectedCustomer!.address}'),
-                          ] else ...[
-                            const Text('You are continuing as a guest.'),
-                          ],
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 16),
                     // Search TextField
                     TextField(
@@ -748,20 +758,48 @@ class _POSScreenState extends State<POSScreen> {
                       ),
                     const SizedBox(height: 16),
                     // Continue as Guest Button
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedCustomer =
-                              null; // Set selectedCustomer to null
-                          isGuest =
-                              true; // Set isGuest to true when continuing as guest
-                        });
-                        Navigator.pop(context); // Close the bottom sheet
-                      },
-                      child: const Text(
-                        'Continue as Guest',
-                        style: TextStyle(color: Colors.blue),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // add new customer
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              _showAddCustomerDialog();
+                            },
+                            child: const Text(
+                              'Add New Customer',
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          ),
+                        ),
+                        // Continue as Guest Button
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedCustomer =
+                                    null; // Set selectedCustomer to null
+                                isGuest =
+                                    true; // Set isGuest to true when continuing as guest
+                              });
+                              Navigator.pop(context); // Close the bottom sheet
+                            },
+                            child: const Text(
+                              'Continue as Guest',
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -1169,6 +1207,87 @@ class _POSScreenState extends State<POSScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showAddCustomerDialog() {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController addressController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Add New Customer',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: 400, // Set a fixed width for the dialog
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter customer name',
+                      labelText: 'Name',
+                    ),
+                  ),
+                  TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter customer phone',
+                      labelText: 'Phone',
+                    ),
+                  ),
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter customer email',
+                      labelText: 'Email',
+                    ),
+                  ),
+                  TextField(
+                    controller: addressController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter customer address',
+                      labelText: 'Address',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await context.read<CustomerCubit>().addCustomer(
+                      name: nameController.text,
+                      phone: phoneController.text,
+                      email: emailController.text,
+                      address: addressController.text,
+                    );
+                Navigator.of(context).pop();
+              },
+              child: const Text('Add Customer'),
+            ),
+          ],
         );
       },
     );

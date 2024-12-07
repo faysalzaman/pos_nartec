@@ -19,6 +19,7 @@ class OrdersInProcessBottomSheet extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         appBar: AppBar(
           title: const Text(
@@ -60,6 +61,7 @@ class OrdersInProcessBottomSheet extends StatelessWidget {
 
   Widget _buildOrderList(List<StatusModel> orders) {
     return ListView.builder(
+      shrinkWrap: true,
       itemCount: orders.length,
       itemBuilder: (context, index) {
         final order = orders[index];
@@ -73,12 +75,12 @@ class OrdersInProcessBottomSheet extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: ListTile(
             title: Text('Order #${order.tracking}',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
                 'Type: ${order.orderType}\nCustomer: ${order.customer}\nCreated At: ${order.createdAt}\nUpdated At: ${order.updatedAt}',
                 style: TextStyle(color: Colors.grey.shade600)),
             trailing: Text('Progress: ${order.progress}%',
-                style: TextStyle(color: Colors.green)),
+                style: const TextStyle(color: Colors.green)),
           ),
         );
       },

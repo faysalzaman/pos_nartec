@@ -24,4 +24,31 @@ class CustomerCubit extends Cubit<CustomerState> {
       emit(CustomerError(message: e.toString().replaceAll("Exception:", "")));
     }
   }
+
+  Future<void> addCustomer({
+    required String name,
+    required String phone,
+    required String email,
+    required String address,
+  }) async {
+    emit(CustomerAddedLoading());
+
+    try {
+      await CustomerController.addCustomer(
+        name: name,
+        phone: phone,
+        email: email,
+        address: address,
+      );
+
+      emit(CustomerAdded());
+    } catch (e) {
+      log(e.toString());
+      emit(
+        CustomerAddedError(
+          message: e.toString().replaceAll("Exception:", ""),
+        ),
+      );
+    }
+  }
 }

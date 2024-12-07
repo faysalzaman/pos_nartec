@@ -18,4 +18,37 @@ class CustomerController {
       throw Exception(data['message']);
     }
   }
+
+  static Future<void> addCustomer({
+    required String name,
+    required String phone,
+    required String email,
+    required String address,
+  }) async {
+    final url = Uri.parse("${AppUrl.baseUrl}/api/customers");
+
+    final body = {
+      "name": name,
+      "phone": phone,
+      "email": email,
+      "address": address,
+    };
+
+    final headers = {
+      "Content-Type": "application/json",
+    };
+
+    final response =
+        await http.post(url, body: jsonEncode(body), headers: headers);
+    final data = jsonDecode(response.body);
+
+    print(data);
+    print(response.statusCode);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return data;
+    } else {
+      throw Exception(data['message']);
+    }
+  }
 }
