@@ -4,6 +4,7 @@ import 'package:pos/cubit/auth/auth_cubit.dart';
 import 'package:pos/cubit/customer/customer_cubit.dart';
 import 'package:pos/cubit/sales/sales_cubit.dart';
 import 'package:flutter/services.dart';
+import 'package:pos/cubit/service_table/service_table_cubit.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/screens/main_dashboard/main_dashboard_screen.dart';
 import 'package:pos/utils/app_preferences.dart';
@@ -32,6 +33,7 @@ class MainApp extends StatelessWidget {
         BlocProvider(create: (context) => CategoryCubit()),
         BlocProvider(create: (context) => StatusCubit()),
         BlocProvider(create: (context) => CustomerCubit()),
+        BlocProvider(create: (context) => ServiceTableCubit()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

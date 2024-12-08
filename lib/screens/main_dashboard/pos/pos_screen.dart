@@ -9,10 +9,13 @@ import 'package:pos/cubit/customer/customer_cubit.dart';
 import 'package:pos/cubit/customer/customer_state.dart';
 import 'package:pos/cubit/menu_item/menu_item_cubit.dart';
 import 'package:pos/cubit/menu_item/menu_item_state.dart';
+import 'package:pos/cubit/service_table/service_table_cubit.dart';
+import 'package:pos/cubit/service_table/service_table_state.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/model/category/category_model.dart';
 import 'package:pos/model/customer/customer_model.dart';
 import 'package:pos/model/menu_item/menu_item_model.dart';
+import 'package:pos/model/service_table/service_table_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/widgets/card_item_widget.dart';
@@ -38,6 +41,8 @@ class _POSScreenState extends State<POSScreen> {
 
   final List<MenuItemModel> menuItems = [];
   final List<String> modifiersList = [];
+
+  final List<int> modifierQuantities = [];
 
   // Notes
   TextEditingController kitchenNote = TextEditingController();
@@ -77,6 +82,7 @@ class _POSScreenState extends State<POSScreen> {
     context.read<StatusCubit>().getOrderByStatus(status: "pending");
     context.read<StatusCubit>().getOrderByStatus(status: "preparing");
     context.read<StatusCubit>().getOrderByStatus(status: "ready");
+    context.read<ServiceTableCubit>().getServiceTables();
   }
 
   @override
@@ -159,6 +165,140 @@ class _POSScreenState extends State<POSScreen> {
           pendingList: context.read<StatusCubit>().pendingStatusList,
           preparingList: context.read<StatusCubit>().preparingStatusList,
           readyList: context.read<StatusCubit>().readyStatusList,
+        );
+      },
+    );
+  }
+
+  void showSelectTableDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Select Table',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Table cards
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount:
+                        context.read<ServiceTableCubit>().serviceTables.length,
+                    itemBuilder: (context, index) {
+                      final table = context
+                          .read<ServiceTableCubit>()
+                          .serviceTables[index];
+                      return GestureDetector(
+                        onTap: () {
+                          if (table.status == 'available') {
+                            context
+                                .read<ServiceTableCubit>()
+                                .selectedServiceTable = table;
+                            setState(() {});
+                            Navigator.pop(context);
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const AlertDialog(
+                                title: Text(
+                                  'Table is already occupied\n Please select another table',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Card(
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          color: table.status == 'available'
+                              ? Colors.green[100]
+                              : Colors.red[100],
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black12,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    textAlign: TextAlign.center,
+                                    table.tableName ?? "",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Capacity: ${table.capacity}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  table.status == 'available'
+                                      ? 'Available'
+                                      : 'Occupied',
+                                  style: TextStyle(
+                                    color: table.status == 'available'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -502,17 +642,71 @@ class _POSScreenState extends State<POSScreen> {
                                   ),
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () async {
-                                  if (orderTypeValue == "Dining") {
-                                  } else if (orderTypeValue == "Takeaway") {
-                                  } else {}
+                              BlocConsumer<ServiceTableCubit,
+                                  ServiceTableState>(
+                                listener: (context, state) {
+                                  if (state is ServiceTableSuccess) {
+                                    setState(() {
+                                      context
+                                          .read<ServiceTableCubit>()
+                                          .serviceTables = state.response;
+                                      context
+                                              .read<ServiceTableCubit>()
+                                              .selectedServiceTable =
+                                          state.response.first;
+                                    });
+                                  }
                                 },
-                                child: orderTypeValue == "Dining"
-                                    ? const Text('Select Table')
-                                    : orderTypeValue == "Takeaway"
-                                        ? const Text("Select Pickup")
-                                        : const Text("Select Shipping (Opt)"),
+                                builder: (context, state) {
+                                  print(state);
+                                  return GestureDetector(
+                                    onTap: () {
+                                      // Call the showSelectTableDialog method directly without using its return value
+                                      if (orderTypeValue == "Dining") {
+                                        showSelectTableDialog();
+                                      } else if (orderTypeValue == "Takeaway") {
+                                        // Handle takeaway logic here
+                                      } else {
+                                        // Handle shipping logic here
+                                      }
+                                    },
+                                    child: state is ServiceTableLoading
+                                        ? const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 1,
+                                            ),
+                                          )
+                                        : orderTypeValue == "Dining"
+                                            ? context
+                                                        .read<
+                                                            ServiceTableCubit>()
+                                                        .selectedServiceTable ==
+                                                    null
+                                                ? const Text('Select Table')
+                                                : Text(
+                                                    context
+                                                            .read<
+                                                                ServiceTableCubit>()
+                                                            .selectedServiceTable!
+                                                            .tableName ??
+                                                        "",
+                                                    style: TextStyle(
+                                                      color: context
+                                                                  .read<
+                                                                      ServiceTableCubit>()
+                                                                  .selectedServiceTable!
+                                                                  .status ==
+                                                              'available'
+                                                          ? Colors.green
+                                                          : Colors.grey,
+                                                    ),
+                                                  )
+                                            : orderTypeValue == "Takeaway"
+                                                ? const Text("Select Pickup")
+                                                : const Text(
+                                                    "Select Shipping (Opt)"),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -522,7 +716,7 @@ class _POSScreenState extends State<POSScreen> {
                           child: SingleChildScrollView(
                             child: ListView.builder(
                               shrinkWrap: true,
-                              physics: NeverScrollableScrollPhysics(),
+                              physics: const NeverScrollableScrollPhysics(),
                               itemCount: cartItems.length,
                               itemBuilder: (context, index) {
                                 final item = cartItems[index];
@@ -903,6 +1097,7 @@ class _POSScreenState extends State<POSScreen> {
             menuItem,
             quantity: 1,
             modifiers: modifiers,
+            modifierQuantities,
           ));
         });
       },
@@ -957,9 +1152,7 @@ class _POSScreenState extends State<POSScreen> {
       // Calculate the total for each item including modifiers
       double modifiersTotal = item.selectedModifiers
           .fold(0.0, (sum, modifier) => sum + modifier.price);
-      return total +
-          (item.menuItem.price * item.quantity) +
-          (modifiersTotal * item.quantity);
+      return total + (item.menuItem.price * item.quantity) + modifiersTotal;
     });
   }
 
@@ -1297,11 +1490,13 @@ class _POSScreenState extends State<POSScreen> {
 class CartItem {
   final MenuItemModel menuItem;
   int quantity;
+  final List<int> modifierQuantities;
   final List<ModifierModel> modifiers; // All modifiers
   List<ModifierModel> selectedModifiers; // Change to mutable list
 
   CartItem(
-    this.menuItem, {
+    this.menuItem,
+    this.modifierQuantities, {
     required this.quantity,
     required this.modifiers,
     List<ModifierModel>? selectedModifiers, // Accept as a parameter
@@ -1309,7 +1504,7 @@ class CartItem {
             selectedModifiers ?? []; // Initialize as an empty list if null
 
   // New constructor to create CartItem from MenuItemModel
-  CartItem.fromMenuItem(this.menuItem)
+  CartItem.fromMenuItem(this.menuItem, this.modifierQuantities)
       : modifiers = menuItem.modifiers,
         quantity = 1, // Default quantity to 1
         selectedModifiers = []; // Initialize as an empty list

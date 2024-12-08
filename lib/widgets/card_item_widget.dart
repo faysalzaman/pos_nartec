@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'package:pos/screens/main_dashboard/pos/pos_screen.dart';
 import 'package:pos/utils/app_colors.dart';
@@ -29,8 +31,8 @@ class _CartItemWidgetState extends State<CartItemWidget> {
       (total, modifier) => total + modifier.price,
     );
 
-    double totalPrice = (widget.item.menuItem.price * widget.item.quantity) +
-        (modifiersTotal * widget.item.quantity);
+    double totalPrice =
+        (widget.item.menuItem.price * widget.item.quantity) + modifiersTotal;
 
     return Card(
       color: Colors.white,
