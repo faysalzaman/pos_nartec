@@ -1,3 +1,4 @@
+import 'package:pos/model/pickup/pickup_model.dart';
 import 'package:pos/model/service_table/service_table_model.dart';
 
 abstract class ServiceTableState {}
@@ -16,4 +17,16 @@ class ServiceTableError extends ServiceTableState {
   final String message;
 
   ServiceTableError({required this.message});
+}
+
+class PickupSuccess extends ServiceTableState {
+  final List<PickupModel> response;
+
+  PickupSuccess({required this.response});
+}
+
+class PickupError extends ServiceTableState {
+  final String message;
+
+  PickupError({required this.message});
 }

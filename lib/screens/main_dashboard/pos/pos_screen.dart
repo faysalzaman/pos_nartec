@@ -15,7 +15,6 @@ import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/model/category/category_model.dart';
 import 'package:pos/model/customer/customer_model.dart';
 import 'package:pos/model/menu_item/menu_item_model.dart';
-import 'package:pos/model/service_table/service_table_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/widgets/card_item_widget.dart';
@@ -63,6 +62,10 @@ class _POSScreenState extends State<POSScreen> {
   final ScrollController _menuScrollController = ScrollController();
   bool isLoadingMoreMenuItems = false;
 
+  String? selectedPickupPointId;
+
+  bool isProcessPanel = false;
+
   // Add a variable to hold the selected customer
   CustomerModel?
       selectedCustomer; // Assuming CustomerModel is the type of your customer
@@ -79,10 +82,12 @@ class _POSScreenState extends State<POSScreen> {
       limit: menuItemLimit,
       category: "",
     );
+
     context.read<StatusCubit>().getOrderByStatus(status: "pending");
     context.read<StatusCubit>().getOrderByStatus(status: "preparing");
     context.read<StatusCubit>().getOrderByStatus(status: "ready");
     context.read<ServiceTableCubit>().getServiceTables();
+    context.read<ServiceTableCubit>().getPickup();
   }
 
   @override
@@ -167,6 +172,132 @@ class _POSScreenState extends State<POSScreen> {
           readyList: context.read<StatusCubit>().readyStatusList,
         );
       },
+    );
+  }
+
+  void showSelectPickupDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Select Pickup Point',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Grid of pickup points
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, // Number of columns
+                      childAspectRatio: 2.5, // Adjust aspect ratio as needed
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount:
+                        context.read<ServiceTableCubit>().pickupPoints.length,
+                    itemBuilder: (context, index) {
+                      final pickupPoint =
+                          context.read<ServiceTableCubit>().pickupPoints[index];
+                      return _buildPickupPointCard(
+                        id: pickupPoint.sId ?? "",
+                        title: pickupPoint.placeTitle ?? "",
+                        contactName: pickupPoint.personName ?? "",
+                        phone: pickupPoint.phone ?? "",
+                        address: pickupPoint.address ?? "",
+                        isSelected: selectedPickupPointId == pickupPoint.sId,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPickupPointCard({
+    required String id,
+    required String title,
+    required String contactName,
+    required String phone,
+    required String address,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedPickupPointId = id;
+        });
+        Navigator.of(context).pop();
+      },
+      child: Card(
+        shadowColor: isSelected ? Colors.amber : Colors.transparent,
+        color: isSelected ? Colors.blue[100] : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+              color: isSelected ? Colors.blue : Colors.grey.shade300),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: ListTile(
+          titleAlignment: ListTileTitleAlignment.center,
+          leading: Radio<String>(
+            value: id,
+            groupValue: selectedPickupPointId,
+            onChanged: (String? value) {
+              setState(() {
+                selectedPickupPointId = value;
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text('Contact: $contactName'),
+              Text('Phone: $phone'),
+              Text('Address: $address'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -608,180 +739,257 @@ class _POSScreenState extends State<POSScreen> {
                   ),
                 ),
                 // Right sidebar - Cart
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border:
-                          Border(left: BorderSide(color: Colors.grey.shade200)),
-                    ),
-                    child: Column(
-                      children: [
-                        // Cart header
-                        Container(
-                          padding: const EdgeInsets.all(16),
+                isProcessPanel
+                    ? Expanded(
+                        flex: 2,
+                        child: Container(
                           decoration: BoxDecoration(
+                            color: Colors.white,
                             border: Border(
-                                bottom:
-                                    BorderSide(color: Colors.grey.shade200)),
+                                left: BorderSide(color: Colors.grey.shade200)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
                             children: [
-                              GestureDetector(
-                                onTap: _showCustomerSelectionBottomSheet,
-                                child: Text(
-                                  selectedCustomer != null || isGuest
-                                      ? 'Customer is:\n${selectedCustomer?.name ?? 'Guest'}'
-                                      : 'Select Customer',
-                                  style: TextStyle(
-                                    color: selectedCustomer != null || isGuest
-                                        ? Colors.green
-                                        : Colors.grey,
+                              // cart header...
+                              // Cart total
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      top: BorderSide(
+                                          color: Colors.grey.shade200)),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.tertiary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Total:',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        '\$${calculateTotal().toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              BlocConsumer<ServiceTableCubit,
-                                  ServiceTableState>(
-                                listener: (context, state) {
-                                  if (state is ServiceTableSuccess) {
-                                    setState(() {
-                                      context
-                                          .read<ServiceTableCubit>()
-                                          .serviceTables = state.response;
-                                      context
-                                              .read<ServiceTableCubit>()
-                                              .selectedServiceTable =
-                                          state.response.first;
-                                    });
-                                  }
-                                },
-                                builder: (context, state) {
-                                  print(state);
-                                  return GestureDetector(
-                                    onTap: () {
-                                      // Call the showSelectTableDialog method directly without using its return value
-                                      if (orderTypeValue == "Dining") {
-                                        showSelectTableDialog();
-                                      } else if (orderTypeValue == "Takeaway") {
-                                        // Handle takeaway logic here
-                                      } else {
-                                        // Handle shipping logic here
-                                      }
-                                    },
-                                    child: state is ServiceTableLoading
-                                        ? const Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 1,
-                                            ),
-                                          )
-                                        : orderTypeValue == "Dining"
-                                            ? context
-                                                        .read<
-                                                            ServiceTableCubit>()
-                                                        .selectedServiceTable ==
-                                                    null
-                                                ? const Text('Select Table')
-                                                : Text(
-                                                    context
-                                                            .read<
-                                                                ServiceTableCubit>()
-                                                            .selectedServiceTable!
-                                                            .tableName ??
-                                                        "",
-                                                    style: TextStyle(
-                                                      color: context
-                                                                  .read<
-                                                                      ServiceTableCubit>()
-                                                                  .selectedServiceTable!
-                                                                  .status ==
-                                                              'available'
-                                                          ? Colors.green
-                                                          : Colors.grey,
-                                                    ),
-                                                  )
-                                            : orderTypeValue == "Takeaway"
-                                                ? const Text("Select Pickup")
-                                                : const Text(
-                                                    "Select Shipping (Opt)"),
-                                  );
-                                },
                               ),
                             ],
                           ),
                         ),
-                        // Cart items
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: cartItems.length,
-                              itemBuilder: (context, index) {
-                                final item = cartItems[index];
-                                return CartItemWidget(
-                                  item: item,
-                                  onQuantityChanged: (newQuantity) {
-                                    setState(() {
-                                      if (newQuantity > 0) {
-                                        cartItems[index].quantity = newQuantity;
-                                      } else {
-                                        cartItems.removeAt(index);
-                                      }
-                                    });
-                                  },
-                                  onModifier: () {
-                                    _showModifiersBottomSheet(
-                                        item.modifiers, item);
-                                  },
-                                  onRemove: () {
-                                    setState(() {
-                                      cartItems.removeAt(index);
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        // Cart total
-                        Container(
-                          padding: const EdgeInsets.all(16),
+                      )
+                    : Expanded(
+                        flex: 2,
+                        child: Container(
                           decoration: BoxDecoration(
+                            color: Colors.white,
                             border: Border(
-                                top: BorderSide(color: Colors.grey.shade200)),
+                                left: BorderSide(color: Colors.grey.shade200)),
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.tertiary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Total:',
-                                  style: TextStyle(
-                                    color: Colors.white,
+                          child: Column(
+                            children: [
+                              // Cart header
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      bottom: BorderSide(
+                                          color: Colors.grey.shade200)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () =>
+                                          showCustomerSelectionBottomSheet(
+                                              false),
+                                      child: Text(
+                                        selectedCustomer != null || isGuest
+                                            ? 'Customer is:\n${selectedCustomer?.name ?? 'Guest'}'
+                                            : 'Select Customer',
+                                        style: TextStyle(
+                                          color: selectedCustomer != null ||
+                                                  isGuest
+                                              ? Colors.green
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    BlocConsumer<ServiceTableCubit,
+                                        ServiceTableState>(
+                                      listener: (context, state) {
+                                        print(state);
+                                        if (state is ServiceTableSuccess) {
+                                          setState(() {
+                                            context
+                                                .read<ServiceTableCubit>()
+                                                .serviceTables = state.response;
+                                          });
+                                        }
+                                        if (state is ServiceTableError) {
+                                          context
+                                              .read<ServiceTableCubit>()
+                                              .pickupPoints = [];
+                                        }
+                                        if (state is PickupSuccess) {
+                                          context
+                                              .read<ServiceTableCubit>()
+                                              .pickupPoints = state.response;
+                                        }
+                                        if (state is PickupError) {
+                                          context
+                                              .read<ServiceTableCubit>()
+                                              .pickupPoints = [];
+                                        }
+                                      },
+                                      builder: (context, state) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            // Call the showSelectTableDialog method directly without using its return value
+                                            if (orderTypeValue == "Dining") {
+                                              showSelectTableDialog();
+                                            } else if (orderTypeValue ==
+                                                "Takeaway") {
+                                              showSelectPickupDialog();
+                                            } else {
+                                              showCustomerSelectionBottomSheet(
+                                                  orderTypeValue == "Delivery"
+                                                      ? true
+                                                      : false);
+                                            }
+                                          },
+                                          child: state is ServiceTableLoading
+                                              ? const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 1,
+                                                  ),
+                                                )
+                                              : orderTypeValue == "Dining"
+                                                  ? context
+                                                              .read<
+                                                                  ServiceTableCubit>()
+                                                              .selectedServiceTable ==
+                                                          null
+                                                      ? const Text(
+                                                          'Select Table')
+                                                      : Text(
+                                                          context
+                                                                  .read<
+                                                                      ServiceTableCubit>()
+                                                                  .selectedServiceTable!
+                                                                  .tableName ??
+                                                              "",
+                                                          style: TextStyle(
+                                                            color: context
+                                                                        .read<
+                                                                            ServiceTableCubit>()
+                                                                        .selectedServiceTable!
+                                                                        .status ==
+                                                                    'available'
+                                                                ? Colors.green
+                                                                : Colors.grey,
+                                                          ),
+                                                        )
+                                                  : orderTypeValue == "Takeaway"
+                                                      ? const Text(
+                                                          "Select Pickup")
+                                                      : const Text(
+                                                          "Select Shipping (Opt)"),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Cart items
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: cartItems.length,
+                                    itemBuilder: (context, index) {
+                                      final item = cartItems[index];
+                                      return CartItemWidget(
+                                        item: item,
+                                        onQuantityChanged: (newQuantity) {
+                                          setState(() {
+                                            if (newQuantity > 0) {
+                                              cartItems[index].quantity =
+                                                  newQuantity;
+                                            } else {
+                                              cartItems.removeAt(index);
+                                            }
+                                          });
+                                        },
+                                        onModifier: () {
+                                          _showModifiersBottomSheet(
+                                              item.modifiers, item);
+                                        },
+                                        onRemove: () {
+                                          setState(() {
+                                            cartItems.removeAt(index);
+                                          });
+                                        },
+                                      );
+                                    },
                                   ),
                                 ),
-                                Text(
-                                  '\$${calculateTotal().toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                              ),
+                              // Cart total
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      top: BorderSide(
+                                          color: Colors.grey.shade200)),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.tertiary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Total:',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        '\$${calculateTotal().toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ],
             ),
           ),
@@ -790,7 +998,7 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  void _showCustomerSelectionBottomSheet() {
+  void showCustomerSelectionBottomSheet(bool isDelivery) {
     CustomerCubit.get(context).customerList = [];
     showModalBottomSheet(
       backgroundColor: Colors.white,
@@ -972,24 +1180,28 @@ class _POSScreenState extends State<POSScreen> {
                           ),
                         ),
                         // Continue as Guest Button
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                selectedCustomer =
-                                    null; // Set selectedCustomer to null
-                                isGuest =
-                                    true; // Set isGuest to true when continuing as guest
-                              });
-                              Navigator.pop(context); // Close the bottom sheet
-                            },
-                            child: const Text(
-                              'Continue as Guest',
-                              style: TextStyle(color: Colors.blue),
+                        Visibility(
+                          visible: !isDelivery,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  selectedCustomer =
+                                      null; // Set selectedCustomer to null
+                                  isGuest =
+                                      true; // Set isGuest to true when continuing as guest
+                                });
+                                Navigator.pop(
+                                    context); // Close the bottom sheet
+                              },
+                              child: const Text(
+                                'Continue as Guest',
+                                style: TextStyle(color: Colors.blue),
+                              ),
                             ),
                           ),
                         ),
@@ -1154,6 +1366,12 @@ class _POSScreenState extends State<POSScreen> {
           .fold(0.0, (sum, modifier) => sum + modifier.price);
       return total + (item.menuItem.price * item.quantity) + modifiersTotal;
     });
+  }
+
+  double calculateTotalOfIsProcessPanel() {
+    // TODO
+    // the calculation will be here
+    return 0.0;
   }
 
   void _showNotesDialog() {
