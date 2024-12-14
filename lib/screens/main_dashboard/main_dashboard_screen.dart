@@ -11,6 +11,7 @@ import 'package:pos/screens/main_dashboard/kitchen/kitchen_screen.dart';
 import 'package:pos/screens/main_dashboard/pos/pos_screen.dart';
 import 'package:pos/screens/main_dashboard/sales/sales_screen.dart';
 import 'package:pos/utils/app_colors.dart';
+import 'dart:async';
 
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
@@ -22,6 +23,24 @@ class MainDashboardScreen extends StatefulWidget {
 class _MainDashboardScreenState extends State<MainDashboardScreen> {
   Widget _currentScreen = const DashboardScreen();
   String _currentTitle = 'Dashboard';
+  DateTime _currentTime = DateTime.now();
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _currentTime = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,15 +178,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text(
-                              'Sunday, November 3, 2024',
-                              style: TextStyle(
+                            Text(
+                              _formatDate(_currentTime),
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Text(
-                              '08:36:10 PM',
+                              _formatTime(_currentTime),
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
@@ -278,5 +297,69 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         },
       ),
     );
+  }
+
+  String _formatDate(DateTime dateTime) {
+    return '${_getDayOfWeek(dateTime.weekday)}, ${_getMonth(dateTime.month)} ${dateTime.day}, ${dateTime.year}';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour == 0
+        ? 12
+        : (dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour);
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '${hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')} $period';
+  }
+
+  String _getDayOfWeek(int day) {
+    switch (day) {
+      case 1:
+        return 'Monday';
+      case 2:
+        return 'Tuesday';
+      case 3:
+        return 'Wednesday';
+      case 4:
+        return 'Thursday';
+      case 5:
+        return 'Friday';
+      case 6:
+        return 'Saturday';
+      case 7:
+        return 'Sunday';
+      default:
+        return '';
+    }
+  }
+
+  String _getMonth(int month) {
+    switch (month) {
+      case 1:
+        return 'January';
+      case 2:
+        return 'February';
+      case 3:
+        return 'March';
+      case 4:
+        return 'April';
+      case 5:
+        return 'May';
+      case 6:
+        return 'June';
+      case 7:
+        return 'July';
+      case 8:
+        return 'August';
+      case 9:
+        return 'September';
+      case 10:
+        return 'October';
+      case 11:
+        return 'November';
+      case 12:
+        return 'December';
+      default:
+        return '';
+    }
   }
 }

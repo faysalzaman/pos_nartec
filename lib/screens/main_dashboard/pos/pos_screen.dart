@@ -161,278 +161,18 @@ class _POSScreenState extends State<POSScreen> {
     });
   }
 
-  void _showOrdersInProcess() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return OrdersInProcessBottomSheet(
-          pendingList: context.read<StatusCubit>().pendingStatusList,
-          preparingList: context.read<StatusCubit>().preparingStatusList,
-          readyList: context.read<StatusCubit>().readyStatusList,
-        );
-      },
-    );
+  double calculateTotal() {
+    return cartItems.fold(0, (total, item) {
+      // Calculate the total for each item including modifiers
+      double modifiersTotal = item.selectedModifiers
+          .fold(0.0, (sum, modifier) => sum + modifier.price);
+      return total + (item.menuItem.price * item.quantity) + modifiersTotal;
+    });
   }
 
-  void showSelectPickupDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Select Pickup Point',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Grid of pickup points
-                Expanded(
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // Number of columns
-                      childAspectRatio: 2.5, // Adjust aspect ratio as needed
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount:
-                        context.read<ServiceTableCubit>().pickupPoints.length,
-                    itemBuilder: (context, index) {
-                      final pickupPoint =
-                          context.read<ServiceTableCubit>().pickupPoints[index];
-                      return _buildPickupPointCard(
-                        id: pickupPoint.sId ?? "",
-                        title: pickupPoint.placeTitle ?? "",
-                        contactName: pickupPoint.personName ?? "",
-                        phone: pickupPoint.phone ?? "",
-                        address: pickupPoint.address ?? "",
-                        isSelected: selectedPickupPointId == pickupPoint.sId,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPickupPointCard({
-    required String id,
-    required String title,
-    required String contactName,
-    required String phone,
-    required String address,
-    required bool isSelected,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedPickupPointId = id;
-        });
-        Navigator.of(context).pop();
-      },
-      child: Card(
-        shadowColor: isSelected ? Colors.amber : Colors.transparent,
-        color: isSelected ? Colors.blue[100] : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-              color: isSelected ? Colors.blue : Colors.grey.shade300),
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        child: ListTile(
-          titleAlignment: ListTileTitleAlignment.center,
-          leading: Radio<String>(
-            value: id,
-            groupValue: selectedPickupPointId,
-            onChanged: (String? value) {
-              setState(() {
-                selectedPickupPointId = value;
-              });
-              Navigator.of(context).pop();
-            },
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Text('Contact: $contactName'),
-              Text('Phone: $phone'),
-              Text('Address: $address'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void showSelectTableDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Select Table',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Table cards
-                Expanded(
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      childAspectRatio: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount:
-                        context.read<ServiceTableCubit>().serviceTables.length,
-                    itemBuilder: (context, index) {
-                      final table = context
-                          .read<ServiceTableCubit>()
-                          .serviceTables[index];
-                      return GestureDetector(
-                        onTap: () {
-                          if (table.status == 'available') {
-                            context
-                                .read<ServiceTableCubit>()
-                                .selectedServiceTable = table;
-                            setState(() {});
-                            Navigator.pop(context);
-                          } else {
-                            showDialog(
-                              context: context,
-                              builder: (context) => const AlertDialog(
-                                title: Text(
-                                  'Table is already occupied\n Please select another table',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: Card(
-                          elevation: 5,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          color: table.status == 'available'
-                              ? Colors.green[100]
-                              : Colors.red[100],
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black12,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    textAlign: TextAlign.center,
-                                    table.tableName ?? "",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Capacity: ${table.capacity}',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  table.status == 'available'
-                                      ? 'Available'
-                                      : 'Occupied',
-                                  style: TextStyle(
-                                    color: table.status == 'available'
-                                        ? Colors.green
-                                        : Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  double calculateTotalOfIsProcessPanel() {
+    // TODO the calculation will be here...
+    return 0.0;
   }
 
   @override
@@ -873,9 +613,9 @@ class _POSScreenState extends State<POSScreen> {
                                           },
                                           child: state is ServiceTableLoading
                                               ? const Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 1,
+                                                  child: SpinKitFadingCircle(
+                                                    color: AppColors.primary,
+                                                    size: 15,
                                                   ),
                                                 )
                                               : orderTypeValue == "Dining"
@@ -998,242 +738,534 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  void showCustomerSelectionBottomSheet(bool isDelivery) {
-    CustomerCubit.get(context).customerList = [];
+  void _showOrdersInProcess() {
     showModalBottomSheet(
-      backgroundColor: Colors.white,
       context: context,
       isScrollControlled: true,
+      builder: (context) {
+        return OrdersInProcessBottomSheet(
+          pendingList: context.read<StatusCubit>().pendingStatusList,
+          preparingList: context.read<StatusCubit>().preparingStatusList,
+          readyList: context.read<StatusCubit>().readyStatusList,
+        );
+      },
+    );
+  }
+
+  void showSelectPickupDialog() {
+    showDialog(
+      context: context,
       builder: (BuildContext context) {
-        return BlocConsumer<CustomerCubit, CustomerState>(
-          listener: (context, state) {
-            if (state is CustomerSuccess) {
-              setState(() {
-                CustomerCubit.get(context).customerList = state.response;
-              });
-            }
-          },
-          builder: (context, state) {
-            return SingleChildScrollView(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Select Customer',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Select Pickup Point',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
-                    // Display selected customer information or "Guest"
-                    isGuest || selectedCustomer == null
-                        ? const SizedBox()
-                        : Container(
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Grid of pickup points
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, // Number of columns
+                      childAspectRatio: 2.5, // Adjust aspect ratio as needed
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount:
+                        context.read<ServiceTableCubit>().pickupPoints.length,
+                    itemBuilder: (context, index) {
+                      final pickupPoint =
+                          context.read<ServiceTableCubit>().pickupPoints[index];
+                      return _buildPickupPointCard(
+                        id: pickupPoint.sId ?? "",
+                        title: pickupPoint.placeTitle ?? "",
+                        contactName: pickupPoint.personName ?? "",
+                        phone: pickupPoint.phone ?? "",
+                        address: pickupPoint.address ?? "",
+                        isSelected: selectedPickupPointId == pickupPoint.sId,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPickupPointCard({
+    required String id,
+    required String title,
+    required String contactName,
+    required String phone,
+    required String address,
+    required bool isSelected,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedPickupPointId = id;
+        });
+        Navigator.of(context).pop();
+      },
+      child: Card(
+        shadowColor: isSelected ? Colors.amber : Colors.transparent,
+        color: isSelected ? Colors.blue[100] : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+              color: isSelected ? Colors.blue : Colors.grey.shade300),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: ListTile(
+          titleAlignment: ListTileTitleAlignment.center,
+          leading: Radio<String>(
+            value: id,
+            groupValue: selectedPickupPointId,
+            onChanged: (String? value) {
+              setState(() {
+                selectedPickupPointId = value;
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text('Contact: $contactName'),
+              Text('Phone: $phone'),
+              Text('Address: $address'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void showSelectTableDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Select Table',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Table cards
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount:
+                        context.read<ServiceTableCubit>().serviceTables.length,
+                    itemBuilder: (context, index) {
+                      final table = context
+                          .read<ServiceTableCubit>()
+                          .serviceTables[index];
+                      return GestureDetector(
+                        onTap: () {
+                          if (table.status == 'available') {
+                            context
+                                .read<ServiceTableCubit>()
+                                .selectedServiceTable = table;
+                            setState(() {});
+                            Navigator.pop(context);
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const AlertDialog(
+                                title: Text(
+                                  'Table is already occupied\n Please select another table',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Card(
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          color: table.status == 'available'
+                              ? Colors.green[100]
+                              : Colors.red[100],
+                          child: Padding(
                             padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  selectedCustomer != null
-                                      ? 'Selected Customer:'
-                                      : isGuest
-                                          ? 'You are continuing as a guest.'
-                                          : '',
-                                  style: const TextStyle(
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black12,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    textAlign: TextAlign.center,
+                                    table.tableName ?? "",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                       fontSize: 18,
-                                      fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
-                                if (selectedCustomer != null) ...[
-                                  Text('Name: ${selectedCustomer!.name}'),
-                                  Text('Phone: ${selectedCustomer!.phone}'),
-                                  Text('Email: ${selectedCustomer!.email}'),
-                                  Text('Address: ${selectedCustomer!.address}'),
-                                ] else ...[
-                                  isGuest
-                                      ? const Text(
-                                          'You are continuing as a guest.')
-                                      : const SizedBox(),
-                                ],
+                                Text(
+                                  'Capacity: ${table.capacity}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  table.status == 'available'
+                                      ? 'Available'
+                                      : 'Occupied',
+                                  style: TextStyle(
+                                    color: table.status == 'available'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                    const SizedBox(height: 16),
-                    // Search TextField
-                    TextField(
-                      controller: customerSearch,
-                      onChanged: (value) {
-                        if (value.isEmpty) {
-                          if (customerSearch.text.isNotEmpty) {
-                            CustomerCubit.get(context).customerList = [];
-                          }
-                        } else {
-                          CustomerCubit.get(context).searchCustomer(value);
-                        }
-                      },
-                      onEditingComplete: () {
-                        if (customerSearch.text.isEmpty) {
-                          CustomerCubit.get(context).customerList = [];
-                        } else {
-                          CustomerCubit.get(context)
-                              .searchCustomer(customerSearch.text);
-                        }
-                      },
-                      decoration: const InputDecoration(
-                        hintText: 'Search for existing customer',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.search),
-                      ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
                     ),
-                    const SizedBox(height: 16),
-                    // Customer list
-                    if (state is CustomerError)
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showCustomerSelectionBottomSheet(bool isDelivery) {
+    CustomerCubit.get(context).customerList = [];
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(24),
+            child: BlocConsumer<CustomerCubit, CustomerState>(
+              listener: (context, state) {
+                if (state is CustomerSuccess) {
+                  setState(() {
+                    CustomerCubit.get(context).customerList = state.response;
+                  });
+                }
+              },
+              builder: (context, state) {
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       const Text(
-                        'No customers found. Try a different search or add a new customer.',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      )
-                    else if (CustomerCubit.get(context).customerList.isEmpty)
-                      const Text(
-                        'Search for existing customer or add a new one',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        itemCount:
-                            CustomerCubit.get(context).customerList.length,
-                        itemBuilder: (context, index) {
-                          final customer =
-                              CustomerCubit.get(context).customerList[index];
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                selectedCustomer =
-                                    customer; // Save the selected customer
-                                isGuest =
-                                    false; // Set isGuest to false when a customer is selected
-                              });
-                              Navigator.pop(context); // Close the bottom sheet
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.person, size: 40),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(customer.name,
-                                            style:
-                                                const TextStyle(fontSize: 18)),
-                                        Text(customer.phone,
-                                            style: const TextStyle(
-                                                color: Colors.grey)),
-                                        Text(customer.email,
-                                            style: const TextStyle(
-                                                color: Colors.grey)),
-                                        Text(customer.address,
-                                            style: const TextStyle(
-                                                color: Colors.grey)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                        'Select Customer',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
-                    const SizedBox(height: 16),
-                    // Continue as Guest Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // add new customer
+                      const SizedBox(height: 16),
+                      // Display selected customer information or "Guest"
+                      if (!(isGuest || selectedCustomer == null))
                         Container(
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: TextButton(
-                            onPressed: () {
-                              _showAddCustomerDialog();
-                            },
-                            child: const Text(
-                              'Add New Customer',
-                              style: TextStyle(color: Colors.blue),
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedCustomer != null
+                                    ? 'Selected Customer:'
+                                    : isGuest
+                                        ? 'You are continuing as a guest.'
+                                        : '',
+                                style: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              if (selectedCustomer != null) ...[
+                                Text('Name: ${selectedCustomer!.name}'),
+                                Text('Phone: ${selectedCustomer!.phone}'),
+                                Text('Email: ${selectedCustomer!.email}'),
+                                Text('Address: ${selectedCustomer!.address}'),
+                              ] else ...[
+                                if (isGuest)
+                                  const Text('You are continuing as a guest.'),
+                              ],
+                            ],
                           ),
                         ),
-                        // Continue as Guest Button
-                        Visibility(
-                          visible: !isDelivery,
-                          child: Container(
+                      const SizedBox(height: 16),
+                      // Search TextField
+                      TextField(
+                        controller: customerSearch,
+                        onChanged: (value) {
+                          if (value.isEmpty) {
+                            if (customerSearch.text.isNotEmpty) {
+                              CustomerCubit.get(context).customerList = [];
+                            }
+                          } else {
+                            CustomerCubit.get(context).searchCustomer(value);
+                          }
+                        },
+                        onEditingComplete: () {
+                          if (customerSearch.text.isEmpty) {
+                            CustomerCubit.get(context).customerList = [];
+                          } else {
+                            CustomerCubit.get(context)
+                                .searchCustomer(customerSearch.text);
+                          }
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'Search for existing customer',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Customer list
+                      Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.4,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              if (state is CustomerError)
+                                const Text(
+                                  'No customers found. Try a different search or add a new customer.',
+                                  style: TextStyle(
+                                      fontSize: 18, color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                )
+                              else if (CustomerCubit.get(context)
+                                  .customerList
+                                  .isEmpty)
+                                const Text(
+                                  'Search for existing customer or add a new one',
+                                  style: TextStyle(
+                                      fontSize: 18, color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                )
+                              else
+                                ...CustomerCubit.get(context)
+                                    .customerList
+                                    .map((customer) => Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                selectedCustomer = customer;
+                                                isGuest = false;
+                                              });
+                                              Navigator.pop(context);
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color:
+                                                        Colors.grey.shade300),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.person,
+                                                      size: 40),
+                                                  const SizedBox(width: 16),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(customer.name,
+                                                            style:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        18)),
+                                                        Text(customer.phone,
+                                                            style:
+                                                                const TextStyle(
+                                                                    color: Colors
+                                                                        .grey)),
+                                                        Text(customer.email,
+                                                            style:
+                                                                const TextStyle(
+                                                                    color: Colors
+                                                                        .grey)),
+                                                        Text(customer.address,
+                                                            style:
+                                                                const TextStyle(
+                                                                    color: Colors
+                                                                        .grey)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ))
+                                    .toList(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Action buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.grey.shade300),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: TextButton(
                               onPressed: () {
-                                setState(() {
-                                  selectedCustomer =
-                                      null; // Set selectedCustomer to null
-                                  isGuest =
-                                      true; // Set isGuest to true when continuing as guest
-                                });
-                                Navigator.pop(
-                                    context); // Close the bottom sheet
+                                _showAddCustomerDialog();
                               },
                               child: const Text(
-                                'Continue as Guest',
+                                'Add New Customer',
                                 style: TextStyle(color: Colors.blue),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel',
-                              style: TextStyle(color: Colors.pink)),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                          if (!isDelivery)
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    selectedCustomer = null;
+                                    isGuest = true;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Continue as Guest',
+                                  style: TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel',
+                                style: TextStyle(color: Colors.pink)),
                           ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Done'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         );
       },
     );
@@ -1359,161 +1391,149 @@ class _POSScreenState extends State<POSScreen> {
     );
   }
 
-  double calculateTotal() {
-    return cartItems.fold(0, (total, item) {
-      // Calculate the total for each item including modifiers
-      double modifiersTotal = item.selectedModifiers
-          .fold(0.0, (sum, modifier) => sum + modifier.price);
-      return total + (item.menuItem.price * item.quantity) + modifiersTotal;
-    });
-  }
-
-  double calculateTotalOfIsProcessPanel() {
-    // TODO
-    // the calculation will be here
-    return 0.0;
-  }
-
   void _showNotesDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
           child: Container(
             width: MediaQuery.of(context).size.width * 0.8,
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Order Notes',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Order Notes',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Kitchen Note
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Kitchen note',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Kitchen Note
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Kitchen note',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: kitchenNote,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'Instructions to chef will be displayed in kitchen along order details',
-                              filled: true,
-                              fillColor: Color(0xFFF5F5F5),
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide.none),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: kitchenNote,
+                              decoration: const InputDecoration(
+                                hintText:
+                                    'Instructions to chef will be displayed in kitchen along order details',
+                                filled: true,
+                                fillColor: Color(0xFFF5F5F5),
+                                border: OutlineInputBorder(
+                                    borderSide: BorderSide.none),
+                              ),
+                              maxLines: 4,
                             ),
-                            maxLines: 4,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Staff Note
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Staff note',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(width: 16),
+                      // Staff Note
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Staff note',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: staffNote,
-                            decoration: const InputDecoration(
-                              hintText: 'Staff note for internal use',
-                              filled: true,
-                              fillColor: Color(0xFFF5F5F5),
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide.none),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: staffNote,
+                              decoration: const InputDecoration(
+                                hintText: 'Staff note for internal use',
+                                filled: true,
+                                fillColor: Color(0xFFF5F5F5),
+                                border: OutlineInputBorder(
+                                    borderSide: BorderSide.none),
+                              ),
+                              maxLines: 4,
                             ),
-                            maxLines: 4,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Payment Note
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Payment note',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(width: 16),
+                      // Payment Note
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Payment note',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: paymentNote,
-                            decoration: const InputDecoration(
-                              hintText: 'Payment note for internal use',
-                              filled: true,
-                              fillColor: Color(0xFFF5F5F5),
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide.none),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: paymentNote,
+                              decoration: const InputDecoration(
+                                hintText: 'Payment note for internal use',
+                                filled: true,
+                                fillColor: Color(0xFFF5F5F5),
+                                border: OutlineInputBorder(
+                                    borderSide: BorderSide.none),
+                              ),
+                              maxLines: 4,
                             ),
-                            maxLines: 4,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.pink),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: Colors.pink),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Save notes logic here
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2C4957),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Save notes logic here
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2C4957),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text('Save Notes'),
                       ),
-                      child: const Text('Save Notes'),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -1523,10 +1543,18 @@ class _POSScreenState extends State<POSScreen> {
 
   void _showModifiersBottomSheet(
       List<ModifierModel> modifiers, CartItem cartItem) {
-    // Create a list to keep track of selected modifiers
+    // Create a list to keep track of selected modifiers and their quantities
     List<bool> selectedModifiers = List.generate(modifiers.length, (index) {
-      // Check if the modifier is already selected
       return cartItem.selectedModifiers.contains(modifiers[index]);
+    });
+
+    List<int> modifierQuantities = List.generate(modifiers.length, (index) {
+      if (cartItem.selectedModifiers.contains(modifiers[index])) {
+        return cartItem.selectedModifiers
+            .where((modifier) => modifier == modifiers[index])
+            .length;
+      }
+      return 0;
     });
 
     showModalBottomSheet(
@@ -1555,17 +1583,49 @@ class _POSScreenState extends State<POSScreen> {
                     const SizedBox(height: 16),
                     Column(
                       children: List.generate(modifiers.length, (index) {
-                        return CheckboxListTile(
-                          title: Text(modifiers[index].name),
-                          subtitle: Text('AED ${modifiers[index].price}'),
-                          value: selectedModifiers[index],
-                          activeColor:
-                              AppColors.primary, // Set the checked color
-                          onChanged: (bool? value) {
-                            setState(() {
-                              selectedModifiers[index] = value ?? false;
-                            });
-                          },
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                title: Text(modifiers[index].name),
+                                subtitle: Text('AED ${modifiers[index].price}'),
+                                value: selectedModifiers[index],
+                                activeColor: AppColors.primary,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    selectedModifiers[index] = value ?? false;
+                                    // Reset quantity to 1 when selected, 0 when unselected
+                                    modifierQuantities[index] =
+                                        value ?? false ? 1 : 0;
+                                  });
+                                },
+                              ),
+                            ),
+                            if (selectedModifiers[index]) ...[
+                              IconButton(
+                                icon: const Icon(Icons.remove),
+                                onPressed: modifierQuantities[index] > 1
+                                    ? () {
+                                        setState(() {
+                                          modifierQuantities[index]--;
+                                        });
+                                      }
+                                    : null,
+                              ),
+                              Text(
+                                modifierQuantities[index].toString(),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: () {
+                                  setState(() {
+                                    modifierQuantities[index]++;
+                                  });
+                                },
+                              ),
+                            ],
+                          ],
                         );
                       }),
                     ),
@@ -1585,11 +1645,14 @@ class _POSScreenState extends State<POSScreen> {
                       const SizedBox(width: 16),
                       ElevatedButton(
                         onPressed: () {
-                          // Collect selected modifiers
+                          // Collect selected modifiers with their quantities
                           List<ModifierModel> selected = [];
                           for (int i = 0; i < modifiers.length; i++) {
                             if (selectedModifiers[i]) {
-                              selected.add(modifiers[i]);
+                              // Add the modifier multiple times based on quantity
+                              for (int j = 0; j < modifierQuantities[i]; j++) {
+                                selected.add(modifiers[i]);
+                              }
                             }
                           }
 
@@ -1599,9 +1662,7 @@ class _POSScreenState extends State<POSScreen> {
                             cartItem.selectedModifiers.addAll(selected);
                           });
 
-                          // Notify the parent widget to rebuild
                           Navigator.pop(context);
-                          // Trigger a rebuild of the CartItemWidget
                           updateCartItem(cartItem);
                         },
                         style: ElevatedButton.styleFrom(
