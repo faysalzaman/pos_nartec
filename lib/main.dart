@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/cubit/auth/auth_cubit.dart';
 import 'package:pos/cubit/customer/customer_cubit.dart';
+import 'package:pos/cubit/order/order_cubit.dart';
 import 'package:pos/cubit/sales/sales_cubit.dart';
 import 'package:flutter/services.dart';
 import 'package:pos/cubit/service_table/service_table_cubit.dart';
@@ -34,6 +35,7 @@ class MainApp extends StatelessWidget {
         BlocProvider(create: (context) => StatusCubit()),
         BlocProvider(create: (context) => CustomerCubit()),
         BlocProvider(create: (context) => ServiceTableCubit()),
+        BlocProvider(create: (context) => OrderCubit()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

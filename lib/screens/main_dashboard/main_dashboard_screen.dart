@@ -1,6 +1,8 @@
 // ignore_for_file: unused_local_variable
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pos/cubit/order/order_cubit.dart';
 import 'package:pos/screens/main_dashboard/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/main_dashboard/expenses/expense_type/expense_type_screen.dart';
 import 'package:pos/screens/main_dashboard/expenses/expenses/expenses_screen.dart';
@@ -264,33 +266,43 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             switch (title) {
               case 'Dashboard':
                 _currentScreen = const DashboardScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Sales':
                 _currentScreen = const SalesOrdersScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'POS':
                 _currentScreen = const POSScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Kitchen':
                 _currentScreen = const KitchenScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Expense Type':
                 _currentScreen = const ExpenseTypeScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Expenses':
                 _currentScreen = const ExpensesScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Categories':
                 _currentScreen = const CategoriesScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Menu Items':
                 _currentScreen = const MenuItemsScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Modifiers':
                 _currentScreen = const ModifiersScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
               default:
                 _currentScreen = const DashboardScreen();
+                context.read<OrderCubit>().ordersModel = null;
                 break;
             }
           });

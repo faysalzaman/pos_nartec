@@ -51,8 +51,6 @@ class SalesController {
     final response = await http.delete(url);
     final data = jsonDecode(response.body);
 
-    print(data);
-
     if (response.statusCode == 200 || response.statusCode == 201) {
       return data;
     } else {

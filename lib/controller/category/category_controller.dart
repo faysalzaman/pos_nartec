@@ -15,8 +15,6 @@ class CategoryController {
     final response = await http.get(url);
     final data = jsonDecode(response.body);
 
-    print('API Response: $data'); // Debug print
-
     if (response.statusCode == 200 || response.statusCode == 201) {
       return CategoryModel.fromJson(data);
     } else {

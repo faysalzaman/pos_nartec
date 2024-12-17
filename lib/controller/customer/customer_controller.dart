@@ -42,9 +42,6 @@ class CustomerController {
         await http.post(url, body: jsonEncode(body), headers: headers);
     final data = jsonDecode(response.body);
 
-    print(data);
-    print(response.statusCode);
-
     if (response.statusCode == 200 || response.statusCode == 201) {
       return data;
     } else {

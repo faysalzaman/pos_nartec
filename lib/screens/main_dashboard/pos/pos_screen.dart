@@ -9,16 +9,18 @@ import 'package:pos/cubit/customer/customer_cubit.dart';
 import 'package:pos/cubit/customer/customer_state.dart';
 import 'package:pos/cubit/menu_item/menu_item_cubit.dart';
 import 'package:pos/cubit/menu_item/menu_item_state.dart';
+import 'package:pos/cubit/order/order_cubit.dart';
+import 'package:pos/cubit/order/order_state.dart';
 import 'package:pos/cubit/service_table/service_table_cubit.dart';
 import 'package:pos/cubit/service_table/service_table_state.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
 import 'package:pos/model/category/category_model.dart';
 import 'package:pos/model/customer/customer_model.dart';
 import 'package:pos/model/menu_item/menu_item_model.dart';
+import 'package:pos/model/order/status_model.dart';
 import 'package:pos/utils/app_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/widgets/card_item_widget.dart';
-import 'package:pos/widgets/orders_in_process_bottom_sheet.dart';
 import 'package:pos/widgets/placeholders/category_placeholder.dart';
 
 class POSScreen extends StatefulWidget {
@@ -64,12 +66,14 @@ class _POSScreenState extends State<POSScreen> {
 
   String? selectedPickupPointId;
 
-  bool isProcessPanel = false;
-
   // Add a variable to hold the selected customer
   CustomerModel?
       selectedCustomer; // Assuming CustomerModel is the type of your customer
   bool isGuest = false; // Flag to indicate if the user is a guest
+
+  // Add focus nodes
+  final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _customerSearchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -88,6 +92,10 @@ class _POSScreenState extends State<POSScreen> {
     context.read<StatusCubit>().getOrderByStatus(status: "ready");
     context.read<ServiceTableCubit>().getServiceTables();
     context.read<ServiceTableCubit>().getPickup();
+
+    // Add focus node listeners if needed
+    _searchFocusNode.addListener(_onSearchFocusChange);
+    _customerSearchFocusNode.addListener(_onCustomerSearchFocusChange);
   }
 
   @override
@@ -98,6 +106,13 @@ class _POSScreenState extends State<POSScreen> {
     kitchenNote.dispose();
     staffNote.dispose();
     paymentNote.dispose();
+    customerSearch.dispose();
+
+    // Dispose focus nodes
+    _searchFocusNode.removeListener(_onSearchFocusChange);
+    _customerSearchFocusNode.removeListener(_onCustomerSearchFocusChange);
+    _searchFocusNode.dispose();
+    _customerSearchFocusNode.dispose();
   }
 
   void _onScroll() {
@@ -175,578 +190,1381 @@ class _POSScreenState extends State<POSScreen> {
     return 0.0;
   }
 
+  // Focus change handlers
+  void _onSearchFocusChange() {
+    if (!_searchFocusNode.hasFocus) {
+      // Handle search focus lost
+    }
+  }
+
+  void _onCustomerSearchFocusChange() {
+    if (!_customerSearchFocusNode.hasFocus) {
+      // Handle customer search focus lost
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true, // Ensure this is set to true
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Row(
-              children: [
-                // Clear All Button
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      cartItems.clear();
-                    });
-                  },
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Clear All'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFFE91E63),
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // All Orders Button
-                TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.list),
-                  label: const Text('All orders'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF2C4957),
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Order Type Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      hint: Text(
-                        'Select order type',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      value: orderTypeValue,
-                      items: orderTypeList.map((String item) {
-                        return DropdownMenuItem(
-                          value: item,
-                          child: Text(item),
-                        );
-                      }).toList(),
-                      onChanged: (String? value) {
-                        setState(() {
-                          orderTypeValue = value!;
-                        });
-                      },
-                      dropdownColor: Colors.white,
-                      icon: Icon(Icons.keyboard_arrow_down,
-                          color: Colors.grey.shade600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Search TextField
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search product by names',
-                      hintStyle: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(4),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Action Buttons
-                TextButton.icon(
-                  onPressed: _showNotesDialog,
-                  icon: const Icon(Icons.note),
-                  label: const Text('Notes'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
-                    foregroundColor: Colors.black87,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: _showOrdersInProcess,
-                  icon: const Icon(Icons.pending),
-                  label: const Text('In Process'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
-                    foregroundColor: Colors.black87,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.check),
-                  label: const Text('Submit'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Categories
-          Container(
-            height: 100,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              border: Border(right: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: BlocConsumer<CategoryCubit, CategoryState>(
-              listener: (context, state) {
-                if (state is CategorySuccess) {
-                  // menuCubit.getMenuItems(
-                  //   page: menuItemPage,
-                  //   limit: menuItemLimit,
-                  //   search: "",
-                  //   category: categories.first.id,
-                  // );
-                  setState(() {
-                    if (currentPage == 1) {
-                      categories = state.response.categories;
-                    } else {
-                      categories.addAll(state.response.categories);
-                    }
-                    isLoadingMore = false;
-                  });
-                }
-              },
-              builder: (context, state) {
-                if (state is CategoryLoading && categories.isEmpty) {
-                  return const CategoryPlaceholderWidget();
-                }
+      body: BlocConsumer<OrderCubit, OrderState>(
+        listener: (context, state) {
+          if (state is OrderSuccess) {
+            // clear cart items
+            setState(() {
+              cartItems.clear();
+            });
 
-                return SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ...categories.map((category) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildCategoryItem(
-                              category,
-                              selectedCategory == category.id,
-                            ),
-                          )),
-                      if (isLoadingMore)
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          // Main content area
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(
-                          right: BorderSide(color: Colors.grey.shade200)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.shade200,
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: BlocConsumer<MenuItemCubit, MenuItemState>(
-                      bloc: menuCubit,
-                      listener: (context, state) {
-                        if (state is MenuItemSuccess) {
-                          setState(() {
-                            if (menuItemPage == 1) {
-                              menuItems.clear();
+            kitchenNote.clear();
+            staffNote.clear();
+            paymentNote.clear();
+            selectedCustomer = null;
+            selectedPickupPointId = null;
+            context.read<ServiceTableCubit>().selectedServiceTable = null;
+          }
+          if (state is OrderDeleteSuccess) {
+            context.read<StatusCubit>().getOrderByStatus(status: "pending");
+            context.read<StatusCubit>().getOrderByStatus(status: "preparing");
+            context.read<StatusCubit>().getOrderByStatus(status: "ready");
+            context.read<ServiceTableCubit>().getServiceTables();
+            context.read<ServiceTableCubit>().getPickup();
+            setState(() {
+              cartItems.clear();
+              context.read<OrderCubit>().ordersModel = null;
+            });
+
+            // show snackbar
+            final snackBar = SnackBar(
+              content: Text(state.message),
+            );
+            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          }
+
+          if (state is OrdersItemDeleteSuccess) {
+            // Refresh lists
+            context.read<StatusCubit>().getOrderByStatus(status: "pending");
+            context.read<StatusCubit>().getOrderByStatus(status: "preparing");
+            context.read<StatusCubit>().getOrderByStatus(status: "ready");
+            context.read<ServiceTableCubit>().getServiceTables();
+            context.read<ServiceTableCubit>().getPickup();
+
+            setState(() {});
+
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Item removed successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else if (state is OrdersItemDeleteError) {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          return Column(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border:
+                      Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  children: [
+                    // Clear All Button
+                    TextButton.icon(
+                      onPressed: context.read<OrderCubit>().ordersModel == null
+                          ? () {
+                              setState(() {
+                                cartItems.clear();
+                              });
                             }
-                            menuItems.addAll(state.response.menuItems);
-                            isLoadingMoreMenuItems = false;
-                          });
-                        } else if (state is MenuItemError) {
-                          setState(() {
-                            isLoadingMoreMenuItems = false;
-                          });
-                          final snackBar = SnackBar(
-                            elevation: 0,
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: Colors.transparent,
-                            content: AwesomeSnackbarContent(
-                              title: 'Error!',
-                              message: state.message,
-                              contentType: ContentType.failure,
+                          : () {
+                              // Show delete confirmation dialog
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    backgroundColor: Colors.white,
+                                    title: const Text('Delete Order'),
+                                    content: const Text(
+                                      'Are you sure you want to delete this order? This action cannot be undone.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          // Add your delete logic here
+                                          context
+                                              .read<OrderCubit>()
+                                              .deleteOrder(context
+                                                  .read<OrderCubit>()
+                                                  .ordersModel!
+                                                  .id);
+                                          setState(() {
+                                            context
+                                                .read<OrderCubit>()
+                                                .ordersModel = null;
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text(
+                                          'Delete',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                      icon: context.read<OrderCubit>().ordersModel != null
+                          ? const Icon(Icons.delete)
+                          : const Icon(Icons.clear),
+                      label: context.read<OrderCubit>().ordersModel != null
+                          ? state is OrderDeleteLoading
+                              ? const Text("Removing")
+                              : const Text('Remove')
+                          : const Text('Clear All'),
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFE91E63),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+                    // All Orders Button
+                    TextButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.list),
+                      label: const Text('All orders'),
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFF2C4957),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Order Type Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          hint: Text(
+                            'Select order type',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
                             ),
-                          );
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(snackBar);
-                        }
-                      },
-                      builder: (context, state) {
-                        if (state is MenuItemLoading && menuItems.isEmpty) {
-                          return const Center(
-                            child: SpinKitFadingCircle(
-                              color: AppColors.primary,
-                            ),
-                          );
-                        } else if (menuItems.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'Select a category to view items  ',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          );
-                        }
-                        return GridView.builder(
-                          controller: _menuScrollController,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            childAspectRatio: 1,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
                           ),
-                          itemCount: menuItems.length +
-                              (isLoadingMoreMenuItems ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == menuItems.length) {
+                          value: orderTypeValue,
+                          items: orderTypeList.map((String item) {
+                            return DropdownMenuItem(
+                              value: item,
+                              child: Text(item),
+                            );
+                          }).toList(),
+                          onChanged: (String? value) {
+                            setState(() {
+                              orderTypeValue = value!;
+                            });
+                          },
+                          dropdownColor: Colors.white,
+                          icon: Icon(Icons.keyboard_arrow_down,
+                              color: Colors.grey.shade600),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Search TextField
+                    Expanded(
+                      child: TextField(
+                        focusNode: _searchFocusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search product by names',
+                          hintStyle: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Action Buttons
+                    TextButton.icon(
+                      onPressed: _showNotesDialog,
+                      icon: const Icon(Icons.note),
+                      label: const Text('Notes'),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: _showOrdersInProcess,
+                      icon: const Icon(Icons.pending),
+                      label: const Text('In Process'),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: context.read<OrderCubit>().ordersModel == null
+                          ? () async {
+                              await context.read<OrderCubit>().submitOrder(
+                                    instructions: {
+                                      "kitchen": kitchenNote.text,
+                                      "staff": staffNote.text,
+                                      "payment": paymentNote.text
+                                    },
+                                    menuItems: cartItems
+                                        .map((item) => {
+                                              "menuItemId": item.menuItem.id,
+                                              "quantity": item.quantity,
+                                              if (item
+                                                  .selectedModifiers.isNotEmpty)
+                                                "modifiers": item
+                                                    .selectedModifiers
+                                                    .fold<Map<String, int>>({},
+                                                        (map, modifier) {
+                                                      map[modifier.id] =
+                                                          (map[modifier.id] ??
+                                                                  0) +
+                                                              1;
+                                                      return map;
+                                                    })
+                                                    .entries
+                                                    .map((entry) => {
+                                                          "modifierId":
+                                                              entry.key,
+                                                          "quantity":
+                                                              entry.value
+                                                        })
+                                                    .toList()
+                                            })
+                                        .toList(),
+                                    orderDetails: {
+                                      "customerId":
+                                          isGuest ? null : selectedCustomer?.id,
+                                      "orderType": orderTypeValue.toLowerCase(),
+                                      if (orderTypeValue == "Dining")
+                                        "serviceTableId": context
+                                            .read<ServiceTableCubit>()
+                                            .selectedServiceTable
+                                            ?.sId,
+                                      if (orderTypeValue == "Takeaway")
+                                        "pickupPointId": selectedPickupPointId,
+                                    },
+                                    orderType: orderTypeValue.toLowerCase(),
+                                  );
+
+                              context
+                                  .read<StatusCubit>()
+                                  .getOrderByStatus(status: "pending");
+                              context
+                                  .read<StatusCubit>()
+                                  .getOrderByStatus(status: "preparing");
+                              context
+                                  .read<StatusCubit>()
+                                  .getOrderByStatus(status: "ready");
+                              context
+                                  .read<ServiceTableCubit>()
+                                  .getServiceTables();
+                              context.read<ServiceTableCubit>().getPickup();
+                            }
+                          : () {},
+                      icon: const Icon(Icons.check),
+                      label: state is OrderLoading
+                          ? const Text('Submitting...')
+                          : context.read<OrderCubit>().ordersModel != null
+                              ? const Text('Update')
+                              : const Text('Submit'),
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            context.read<OrderCubit>().ordersModel != null
+                                ? const Color.fromARGB(255, 97, 110, 103)
+                                : const Color.fromRGBO(0, 200, 83, 1),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Categories
+              Container(
+                height: 100,
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  border:
+                      Border(right: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: BlocConsumer<CategoryCubit, CategoryState>(
+                  listener: (context, state) {
+                    if (state is CategorySuccess) {
+                      // menuCubit.getMenuItems(
+                      //   page: menuItemPage,
+                      //   limit: menuItemLimit,
+                      //   search: "",
+                      //   category: categories.first.id,
+                      // );
+                      setState(() {
+                        if (currentPage == 1) {
+                          categories = state.response.categories;
+                        } else {
+                          categories.addAll(state.response.categories);
+                        }
+                        isLoadingMore = false;
+                      });
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is CategoryLoading && categories.isEmpty) {
+                      return const CategoryPlaceholderWidget();
+                    }
+
+                    return SingleChildScrollView(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ...categories.map((category) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: _buildCategoryItem(
+                                  category,
+                                  selectedCategory == category.id,
+                                ),
+                              )),
+                          if (isLoadingMore)
+                            const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SpinKitFadingCircle(
+                                  color: Colors.white,
+                                  size: 20.0,
+                                )),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Main content area
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                              right: BorderSide(color: Colors.grey.shade200)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade200,
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: BlocConsumer<MenuItemCubit, MenuItemState>(
+                          bloc: menuCubit,
+                          listener: (context, state) {
+                            if (state is MenuItemSuccess) {
+                              setState(() {
+                                if (menuItemPage == 1) {
+                                  menuItems.clear();
+                                }
+                                menuItems.addAll(state.response.menuItems);
+                                isLoadingMoreMenuItems = false;
+                              });
+                            } else if (state is MenuItemError) {
+                              setState(() {
+                                isLoadingMoreMenuItems = false;
+                              });
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'Error!',
+                                  message: state.message,
+                                  contentType: ContentType.failure,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(snackBar);
+                            }
+                          },
+                          builder: (context, state) {
+                            if (state is MenuItemLoading && menuItems.isEmpty) {
                               return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: SpinKitFadingCircle(
-                                    color: AppColors.primary,
+                                child: SpinKitFadingCircle(
+                                  color: AppColors.primary,
+                                ),
+                              );
+                            } else if (menuItems.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'Select a category to view items  ',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
                                   ),
                                 ),
                               );
                             }
-                            return _buildProductCard(
-                              menuItems[index].modifiers,
-                              menuItems[index],
+                            return GridView.builder(
+                              controller: _menuScrollController,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                childAspectRatio: 1,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                              ),
+                              itemCount: menuItems.length +
+                                  (isLoadingMoreMenuItems ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == menuItems.length) {
+                                  return const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: SpinKitFadingCircle(
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return _buildProductCard(
+                                  menuItems[index].modifiers,
+                                  menuItems[index],
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                // Right sidebar - Cart
-                isProcessPanel
-                    ? Expanded(
-                        flex: 2,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border(
-                                left: BorderSide(color: Colors.grey.shade200)),
-                          ),
-                          child: Column(
-                            children: [
-                              // cart header...
-                              // Cart total
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                      top: BorderSide(
-                                          color: Colors.grey.shade200)),
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.tertiary,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text(
-                                        'Total:',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        '\$${calculateTotal().toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : Expanded(
-                        flex: 2,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border(
-                                left: BorderSide(color: Colors.grey.shade200)),
-                          ),
-                          child: Column(
-                            children: [
-                              // Cart header
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                      bottom: BorderSide(
-                                          color: Colors.grey.shade200)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () =>
-                                          showCustomerSelectionBottomSheet(
-                                              false),
-                                      child: Text(
-                                        selectedCustomer != null || isGuest
-                                            ? 'Customer is:\n${selectedCustomer?.name ?? 'Guest'}'
-                                            : 'Select Customer',
-                                        style: TextStyle(
-                                          color: selectedCustomer != null ||
-                                                  isGuest
-                                              ? Colors.green
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                    BlocConsumer<ServiceTableCubit,
-                                        ServiceTableState>(
-                                      listener: (context, state) {
-                                        print(state);
-                                        if (state is ServiceTableSuccess) {
-                                          setState(() {
-                                            context
-                                                .read<ServiceTableCubit>()
-                                                .serviceTables = state.response;
-                                          });
-                                        }
-                                        if (state is ServiceTableError) {
-                                          context
-                                              .read<ServiceTableCubit>()
-                                              .pickupPoints = [];
-                                        }
-                                        if (state is PickupSuccess) {
-                                          context
-                                              .read<ServiceTableCubit>()
-                                              .pickupPoints = state.response;
-                                        }
-                                        if (state is PickupError) {
-                                          context
-                                              .read<ServiceTableCubit>()
-                                              .pickupPoints = [];
-                                        }
-                                      },
-                                      builder: (context, state) {
-                                        return GestureDetector(
-                                          onTap: () {
-                                            // Call the showSelectTableDialog method directly without using its return value
-                                            if (orderTypeValue == "Dining") {
-                                              showSelectTableDialog();
-                                            } else if (orderTypeValue ==
-                                                "Takeaway") {
-                                              showSelectPickupDialog();
-                                            } else {
-                                              showCustomerSelectionBottomSheet(
-                                                  orderTypeValue == "Delivery"
-                                                      ? true
-                                                      : false);
-                                            }
-                                          },
-                                          child: state is ServiceTableLoading
-                                              ? const Center(
-                                                  child: SpinKitFadingCircle(
-                                                    color: AppColors.primary,
-                                                    size: 15,
-                                                  ),
-                                                )
-                                              : orderTypeValue == "Dining"
-                                                  ? context
-                                                              .read<
-                                                                  ServiceTableCubit>()
-                                                              .selectedServiceTable ==
-                                                          null
-                                                      ? const Text(
-                                                          'Select Table')
-                                                      : Text(
-                                                          context
-                                                                  .read<
-                                                                      ServiceTableCubit>()
-                                                                  .selectedServiceTable!
-                                                                  .tableName ??
-                                                              "",
-                                                          style: TextStyle(
-                                                            color: context
-                                                                        .read<
-                                                                            ServiceTableCubit>()
-                                                                        .selectedServiceTable!
-                                                                        .status ==
-                                                                    'available'
-                                                                ? Colors.green
-                                                                : Colors.grey,
-                                                          ),
-                                                        )
-                                                  : orderTypeValue == "Takeaway"
-                                                      ? const Text(
-                                                          "Select Pickup")
-                                                      : const Text(
-                                                          "Select Shipping (Opt)"),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Cart items
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  child: ListView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: cartItems.length,
-                                    itemBuilder: (context, index) {
-                                      final item = cartItems[index];
-                                      return CartItemWidget(
-                                        item: item,
-                                        onQuantityChanged: (newQuantity) {
-                                          setState(() {
-                                            if (newQuantity > 0) {
-                                              cartItems[index].quantity =
-                                                  newQuantity;
-                                            } else {
-                                              cartItems.removeAt(index);
-                                            }
-                                          });
-                                        },
-                                        onModifier: () {
-                                          _showModifiersBottomSheet(
-                                              item.modifiers, item);
-                                        },
-                                        onRemove: () {
-                                          setState(() {
-                                            cartItems.removeAt(index);
-                                          });
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              // Cart total
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                      top: BorderSide(
-                                          color: Colors.grey.shade200)),
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.tertiary,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text(
-                                        'Total:',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        '\$${calculateTotal().toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-              ],
-            ),
-          ),
-        ],
+                    ),
+                    // Right sidebar - Cart
+                    context.read<OrderCubit>().ordersModel != null
+                        ? Expanded(
+                            flex: 2,
+                            child: state is OrderByIdLoading
+                                ? const SpinKitFadingCircle(
+                                    color: AppColors.primary,
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      border: Border(
+                                          left: BorderSide(
+                                              color: Colors.grey.shade200)),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        // cart id
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () {
+                                                  print(
+                                                      'Print: ${context.read<OrderCubit>().ordersModel!.tracking.toString()}');
+                                                },
+                                                child: Text(
+                                                  'Print: ${context.read<OrderCubit>().ordersModel!.tracking.toString()}',
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              // cancel button
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: Colors.red,
+                                                ),
+                                                onPressed: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder:
+                                                        (BuildContext context) {
+                                                      bool isAgreed = false;
+                                                      final reasonController =
+                                                          TextEditingController();
+
+                                                      return StatefulBuilder(
+                                                        builder: (context,
+                                                            setState) {
+                                                          return Dialog(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          12),
+                                                            ),
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(24),
+                                                              width:
+                                                                  500, // Set a fixed width for the dialog
+                                                              child:
+                                                                  SingleChildScrollView(
+                                                                child: Column(
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
+                                                                  children: [
+                                                                    Row(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .spaceBetween,
+                                                                      children: [
+                                                                        const Text(
+                                                                          'Cancelling Order',
+                                                                          style:
+                                                                              TextStyle(
+                                                                            fontSize:
+                                                                                24,
+                                                                            fontWeight:
+                                                                                FontWeight.bold,
+                                                                          ),
+                                                                        ),
+                                                                        IconButton(
+                                                                          icon:
+                                                                              const Icon(Icons.close),
+                                                                          onPressed: () =>
+                                                                              Navigator.pop(context),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            16),
+                                                                    const Text(
+                                                                      'Make sure it will not be able to undone, What is the reason behind cancelling order?',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        color: Colors
+                                                                            .black87,
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            24),
+                                                                    TextField(
+                                                                      controller:
+                                                                          reasonController,
+                                                                      decoration:
+                                                                          InputDecoration(
+                                                                        hintText:
+                                                                            'Enter cancellation reason',
+                                                                        filled:
+                                                                            true,
+                                                                        fillColor:
+                                                                            Colors.grey[100],
+                                                                        border:
+                                                                            OutlineInputBorder(
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(8),
+                                                                          borderSide:
+                                                                              BorderSide.none,
+                                                                        ),
+                                                                      ),
+                                                                      maxLines:
+                                                                          3,
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            24),
+                                                                    Row(
+                                                                      children: [
+                                                                        Checkbox(
+                                                                          value:
+                                                                              isAgreed,
+                                                                          onChanged:
+                                                                              (bool? value) {
+                                                                            setState(() {
+                                                                              isAgreed = value ?? false;
+                                                                            });
+                                                                          },
+                                                                        ),
+                                                                        const Text(
+                                                                            'Agreed'),
+                                                                      ],
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            24),
+                                                                    Row(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .end,
+                                                                      children: [
+                                                                        TextButton(
+                                                                          onPressed: () =>
+                                                                              Navigator.pop(context),
+                                                                          child:
+                                                                              const Text(
+                                                                            'Close',
+                                                                            style:
+                                                                                TextStyle(color: Colors.black54),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                16),
+                                                                        ElevatedButton(
+                                                                          style:
+                                                                              ElevatedButton.styleFrom(
+                                                                            backgroundColor:
+                                                                                const Color(0xFFFF4081),
+                                                                            foregroundColor:
+                                                                                Colors.white,
+                                                                            padding:
+                                                                                const EdgeInsets.symmetric(
+                                                                              horizontal: 24,
+                                                                              vertical: 12,
+                                                                            ),
+                                                                          ),
+                                                                          onPressed: isAgreed
+                                                                              ? () {
+                                                                                  // Handle cancellation logic here
+                                                                                  // You can use reasonController.text to get the reason
+                                                                                  Navigator.pop(context);
+                                                                                }
+                                                                              : null,
+                                                                          child:
+                                                                              const Text('Confirm'),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  );
+                                                },
+                                                child: const Text('Cancel'),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // cart headers
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.shade200,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              // selected Customer
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.person),
+                                                  const SizedBox(width: 5),
+                                                  Text(context
+                                                      .read<OrderCubit>()
+                                                      .ordersModel!
+                                                      .customer
+                                                      .name),
+                                                ],
+                                              ),
+
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.home),
+                                                  const SizedBox(width: 5),
+                                                  Text(context
+                                                      .read<OrderCubit>()
+                                                      .ordersModel!
+                                                      .customer
+                                                      .address),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // cart items
+                                        Expanded(
+                                          child: ListView.builder(
+                                            itemCount: context
+                                                .read<OrderCubit>()
+                                                .ordersModel!
+                                                .orderDetails
+                                                .items
+                                                .length,
+                                            itemBuilder: (context, index) {
+                                              final orderStatus = context
+                                                  .read<OrderCubit>()
+                                                  .ordersModel!
+                                                  .orderStatus;
+
+                                              final item = context
+                                                  .read<OrderCubit>()
+                                                  .ordersModel!
+                                                  .orderDetails
+                                                  .items[index];
+
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                decoration: BoxDecoration(
+                                                  border: Border(
+                                                    bottom: BorderSide(
+                                                        color: Colors
+                                                            .grey.shade200),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Add image container
+                                                    Container(
+                                                      width: 60,
+                                                      height: 60,
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(8),
+                                                        image: DecorationImage(
+                                                          image: NetworkImage(
+                                                            item.menuItem
+                                                                    .image ??
+                                                                "",
+                                                          ),
+                                                          fit: BoxFit.cover,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 16),
+                                                    // Existing content
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              Expanded(
+                                                                child: Text(
+                                                                  item.menuItem
+                                                                      .name,
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                'AED ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}',
+                                                                style:
+                                                                    const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 8),
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              Text(
+                                                                  'Quantity: ${item.quantity}'),
+                                                              Text(
+                                                                  'AED ${item.menuItem.price.toStringAsFixed(2)} each'),
+                                                            ],
+                                                          ),
+                                                          // Show modifiers if any
+                                                          if (item.modifiers
+                                                              .isNotEmpty) ...[
+                                                            const SizedBox(
+                                                                height: 8),
+                                                            const Text(
+                                                              'Modifiers:',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500),
+                                                            ),
+                                                            ...item.modifiers
+                                                                .map(
+                                                              (modifier) =>
+                                                                  Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        top: 4),
+                                                                child: Row(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .spaceBetween,
+                                                                  children: [
+                                                                    Text(
+                                                                        '+ ${modifier.name}'),
+                                                                    Text(
+                                                                        'AED ${(modifier.price * modifier.quantity).toStringAsFixed(2)}'),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          const SizedBox(
+                                                              height: 10),
+                                                          // show status
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: orderStatus ==
+                                                                      'pending'
+                                                                  ? Colors
+                                                                      .orange
+                                                                  : orderStatus ==
+                                                                          'ready'
+                                                                      ? Colors
+                                                                          .green
+                                                                      : Colors
+                                                                          .grey,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                            ),
+                                                            child: Text(
+                                                              "Order Status: $orderStatus",
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 10),
+                                                          // three buttons in a row, modifiers, status , remove
+                                                          Visibility(
+                                                            visible: context
+                                                                        .read<
+                                                                            OrderCubit>()
+                                                                        .ordersModel!
+                                                                        .orderStatus ==
+                                                                    'pending' ||
+                                                                context
+                                                                        .read<
+                                                                            OrderCubit>()
+                                                                        .ordersModel!
+                                                                        .orderStatus ==
+                                                                    'preparing',
+                                                            child: Row(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .end,
+                                                              children: [
+                                                                GestureDetector(
+                                                                  onTap: () {},
+                                                                  child:
+                                                                      const Text(
+                                                                    "Modifiers",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                          .blue,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 10),
+                                                                GestureDetector(
+                                                                  onTap: () {},
+                                                                  child:
+                                                                      const Text(
+                                                                    "Status",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                          .green,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 10),
+                                                                GestureDetector(
+                                                                  onTap: () {
+                                                                    context
+                                                                        .read<
+                                                                            OrderCubit>()
+                                                                        .deleteOrderItemById(
+                                                                          context
+                                                                              .read<OrderCubit>()
+                                                                              .ordersModel!
+                                                                              .id, // Order ID
+                                                                          item.id, // Order Item ID
+                                                                        );
+                                                                  },
+                                                                  child:
+                                                                      const Text(
+                                                                    "Remove",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                          .red,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        // Cart total
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                                top: BorderSide(
+                                                    color:
+                                                        Colors.grey.shade200)),
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.tertiary,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  'Total:',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '\$${context.read<OrderCubit>().ordersModel!.orderDetails.items.map((item) => item.menuItem.price * item.quantity).reduce((a, b) => a + b).toStringAsFixed(2)}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          )
+                        : Expanded(
+                            flex: 2,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border(
+                                    left: BorderSide(
+                                        color: Colors.grey.shade200)),
+                              ),
+                              child: Column(
+                                children: [
+                                  // Cart header
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                          bottom: BorderSide(
+                                              color: Colors.grey.shade200)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () =>
+                                              showCustomerSelectionBottomSheet(
+                                                  false),
+                                          child: Text(
+                                            selectedCustomer != null || isGuest
+                                                ? 'Customer is:\n${selectedCustomer?.name ?? 'Guest'}'
+                                                : 'Select Customer',
+                                            style: TextStyle(
+                                              color: selectedCustomer != null ||
+                                                      isGuest
+                                                  ? Colors.green
+                                                  : Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                        BlocConsumer<ServiceTableCubit,
+                                            ServiceTableState>(
+                                          listener: (context, state) {
+                                            print(state);
+                                            if (state is ServiceTableSuccess) {
+                                              setState(() {
+                                                context
+                                                        .read<ServiceTableCubit>()
+                                                        .serviceTables =
+                                                    state.response;
+                                              });
+                                            }
+                                            if (state is ServiceTableError) {
+                                              context
+                                                  .read<ServiceTableCubit>()
+                                                  .pickupPoints = [];
+                                            }
+                                            if (state is PickupSuccess) {
+                                              context
+                                                      .read<ServiceTableCubit>()
+                                                      .pickupPoints =
+                                                  state.response;
+                                            }
+                                            if (state is PickupError) {
+                                              context
+                                                  .read<ServiceTableCubit>()
+                                                  .pickupPoints = [];
+                                            }
+                                          },
+                                          builder: (context, state) {
+                                            return GestureDetector(
+                                              onTap: () {
+                                                // Call the showSelectTableDialog method directly without using its return value
+                                                if (orderTypeValue ==
+                                                    "Dining") {
+                                                  showSelectTableDialog();
+                                                } else if (orderTypeValue ==
+                                                    "Takeaway") {
+                                                  showSelectPickupDialog();
+                                                } else {
+                                                  showCustomerSelectionBottomSheet(
+                                                      orderTypeValue ==
+                                                              "Delivery"
+                                                          ? true
+                                                          : false);
+                                                }
+                                              },
+                                              child: state
+                                                      is ServiceTableLoading
+                                                  ? const Center(
+                                                      child:
+                                                          SpinKitFadingCircle(
+                                                        color:
+                                                            AppColors.primary,
+                                                        size: 15,
+                                                      ),
+                                                    )
+                                                  : orderTypeValue == "Dining"
+                                                      ? context
+                                                                  .read<
+                                                                      ServiceTableCubit>()
+                                                                  .selectedServiceTable ==
+                                                              null
+                                                          ? const Text(
+                                                              'Select Table')
+                                                          : Text(
+                                                              context
+                                                                      .read<
+                                                                          ServiceTableCubit>()
+                                                                      .selectedServiceTable!
+                                                                      .tableName ??
+                                                                  "",
+                                                              style: TextStyle(
+                                                                color: context
+                                                                            .read<
+                                                                                ServiceTableCubit>()
+                                                                            .selectedServiceTable!
+                                                                            .status ==
+                                                                        'available'
+                                                                    ? Colors
+                                                                        .green
+                                                                    : Colors
+                                                                        .grey,
+                                                              ),
+                                                            )
+                                                      : orderTypeValue ==
+                                                              "Takeaway"
+                                                          ? const Text(
+                                                              "Select Pickup")
+                                                          : const Text(
+                                                              "Select Shipping (Opt)"),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Cart items
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      child: ListView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount: cartItems.length,
+                                        itemBuilder: (context, index) {
+                                          final item = cartItems[index];
+                                          return CartItemWidget(
+                                            item: item,
+                                            onQuantityChanged: (newQuantity) {
+                                              setState(() {
+                                                if (newQuantity > 0) {
+                                                  cartItems[index].quantity =
+                                                      newQuantity;
+                                                } else {
+                                                  cartItems.removeAt(index);
+                                                }
+                                              });
+                                            },
+                                            onModifier: () {
+                                              _showModifiersBottomSheet(
+                                                  item.modifiers, item);
+                                            },
+                                            onRemove: () {
+                                              setState(() {
+                                                cartItems.removeAt(index);
+                                              });
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  // Cart total
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                          top: BorderSide(
+                                              color: Colors.grey.shade200)),
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.tertiary,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text(
+                                            'Total:',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            '\$${calculateTotal().toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  void _showOrdersInProcess() {
-    showModalBottomSheet(
+  void _showOrdersInProcess() async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return OrdersInProcessBottomSheet(
-          pendingList: context.read<StatusCubit>().pendingStatusList,
-          preparingList: context.read<StatusCubit>().preparingStatusList,
-          readyList: context.read<StatusCubit>().readyStatusList,
+        // return OrdersInProcessBottomSheet(
+        //   pendingList: context.read<StatusCubit>().pendingStatusList,
+        //   preparingList: context.read<StatusCubit>().preparingStatusList,
+        //   readyList: context.read<StatusCubit>().readyStatusList,
+        // );
+
+        return DefaultTabController(
+          length: 3,
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              title: const Text(
+                'Orders in Process',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              bottom: TabBar(
+                indicatorColor: AppColors.primary,
+                tabs: [
+                  Tab(
+                    icon: const Icon(Icons.access_time, color: Colors.orange),
+                    text:
+                        'Pending (${context.read<StatusCubit>().pendingStatusList.length})',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.kitchen, color: Colors.pink[200]),
+                    text:
+                        'Preparing (${context.read<StatusCubit>().preparingStatusList.length})',
+                  ),
+                  Tab(
+                    icon: const Icon(Icons.check_circle, color: Colors.green),
+                    text:
+                        'Ready (${context.read<StatusCubit>().readyStatusList.length})',
+                  ),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              children: [
+                _buildOrderList(context.read<StatusCubit>().pendingStatusList),
+                _buildOrderList(
+                    context.read<StatusCubit>().preparingStatusList),
+                _buildOrderList(context.read<StatusCubit>().readyStatusList),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  _buildOrderList(List<StatusModel> orders) {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          child: ListTile(
+            onTap: () {
+              context.read<OrderCubit>().getOrdersById(order.id);
+              // Refresh all necessary data
+              context.read<StatusCubit>().getOrderByStatus(status: "pending");
+              context.read<StatusCubit>().getOrderByStatus(status: "preparing");
+              context.read<StatusCubit>().getOrderByStatus(status: "ready");
+              context.read<ServiceTableCubit>().getServiceTables();
+              context.read<ServiceTableCubit>().getPickup();
+
+              setState(() {});
+
+              Navigator.pop(context);
+            },
+            title: Text('Order #${order.tracking}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+                'Type: ${order.orderType}\nCustomer: ${order.customer}\nCreated At: ${order.createdAt}\nUpdated At: ${order.updatedAt}',
+                style: TextStyle(color: Colors.grey.shade600)),
+            trailing: Text('Progress: ${order.progress}%',
+                style: const TextStyle(color: Colors.green)),
+          ),
         );
       },
     );
@@ -1080,6 +1898,7 @@ class _POSScreenState extends State<POSScreen> {
                       const SizedBox(height: 16),
                       // Search TextField
                       TextField(
+                        focusNode: _customerSearchFocusNode,
                         controller: customerSearch,
                         onChanged: (value) {
                           if (value.isEmpty) {
@@ -1780,7 +2599,7 @@ class CartItem {
     required this.modifiers,
     List<ModifierModel>? selectedModifiers, // Accept as a parameter
   }) : selectedModifiers =
-            selectedModifiers ?? []; // Initialize as an empty list if null
+            selectedModifiers ?? []; // Initialize as an empty list
 
   // New constructor to create CartItem from MenuItemModel
   CartItem.fromMenuItem(this.menuItem, this.modifierQuantities)
