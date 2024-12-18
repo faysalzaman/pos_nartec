@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
 
-  bool _obscurePassword = true;
+  bool obscurePassword = true;
 
   void _handleLogin() {
     if (_emailController.text.isEmpty ||
@@ -60,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Add screen size detection
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
 
@@ -74,6 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
             content: AwesomeSnackbarContent(
               title: 'Error!',
               message: state.message,
+              messageTextStyle: const TextStyle(color: Colors.white),
               contentType: ContentType.failure,
             ),
           );
@@ -102,134 +102,118 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       },
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: const AssetImage('assets/images/login_background.jpeg'),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.5),
-                BlendMode.darken,
+        body: SingleChildScrollView(
+          child: Container(
+            height: screenSize.height,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: const AssetImage('assets/images/login_background.jpeg'),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.5),
+                  BlendMode.darken,
+                ),
               ),
             ),
-          ),
-          child: Center(
-            child: SingleChildScrollView(
-              // Add scrolling support
+            child: Center(
               child: Card(
-                // Update margin based on screen size
                 margin: EdgeInsets.all(isTablet ? 32 : 16),
                 color: Colors.white.withOpacity(0.5),
                 child: Container(
-                  // Update constraints based on screen size
                   constraints: BoxConstraints(
                     maxWidth: isTablet ? 500 : screenSize.width * 0.9,
                   ),
-                  // Update padding based on screen size
                   padding: EdgeInsets.all(isTablet ? 32 : 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Restaurant Name',
-                        style: TextStyle(
-                          fontSize: isTablet ? 30 : 20,
-                          fontWeight: FontWeight.bold,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Restaurant Name',
+                          style: TextStyle(
+                            fontSize: isTablet ? 30 : 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.grey[200],
-                        child: Icon(Icons.restaurant,
-                            size: 30, color: Colors.grey[800]),
-                      ),
-                      const SizedBox(height: 20),
-                      AppDropdown(
-                        value: selectedRole,
-                        hintText: 'Select Role',
-                        items: const [
-                          "Admin",
-                          "Manager",
-                          "Chef",
-                          "Order Taker",
-                          "Cashier",
-                        ],
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedRole = newValue;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _emailController,
-                        focusNode: _emailFocusNode,
-                        hintText: 'Enter your email',
-                        prefixIcon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        onEditingComplete: () {
-                          FocusScope.of(context)
-                              .requestFocus(_passwordFocusNode);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        controller: _passwordController,
-                        focusNode: _passwordFocusNode,
-                        hintText: 'Enter your password',
-                        prefixIcon: Icons.password_outlined,
-                        obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onEditingComplete: () {
-                          _passwordFocusNode.unfocus();
-                        },
-
-                        // suffixIcon: IconButton(
-                        //   icon: Icon(
-                        //     _obscurePassword
-                        //         ? Icons.visibility_off
-                        //         : Icons.visibility,
-                        //     color: Colors.grey,
-                        //   ),
-                        //   onPressed: () {
-                        //     setState(() {
-                        //       _obscurePassword = !_obscurePassword;
-                        //     });
-                        //   },
-                        // ),
-                      ),
-                      const SizedBox(height: 24),
-                      BlocBuilder<AuthCubit, AuthState>(
-                        builder: (context, state) {
-                          return ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 20),
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.grey[200],
+                          child: Icon(Icons.restaurant,
+                              size: 30, color: Colors.grey[800]),
+                        ),
+                        const SizedBox(height: 20),
+                        AppDropdown(
+                          value: selectedRole,
+                          hintText: 'Select Role',
+                          items: const [
+                            "Admin",
+                            "Manager",
+                            "Chef",
+                            "Order Taker",
+                            "Cashier",
+                          ],
+                          onChanged: (newValue) {
+                            setState(() {
+                              selectedRole = newValue;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _emailController,
+                          focusNode: _emailFocusNode,
+                          hintText: 'Enter your email',
+                          prefixIcon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          onEditingComplete: () {
+                            FocusScope.of(context)
+                                .requestFocus(_passwordFocusNode);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _passwordController,
+                          focusNode: _passwordFocusNode,
+                          hintText: 'Enter your password',
+                          prefixIcon: Icons.password_outlined,
+                          obscureText: obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onEditingComplete: () {
+                            _passwordFocusNode.unfocus();
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        BlocBuilder<AuthCubit, AuthState>(
+                          builder: (context, state) {
+                            return ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
-                            ),
-                            onPressed:
-                                state is AuthLoading ? null : _handleLogin,
-                            child: state is AuthLoading
-                                ? const SpinKitFadingCircle(
-                                    color: Colors.white,
-                                    size: 24.0,
-                                  )
-                                : const Text(
-                                    'Sign in',
-                                    style: TextStyle(
-                                      fontSize: 16,
+                              onPressed:
+                                  state is AuthLoading ? null : _handleLogin,
+                              child: state is AuthLoading
+                                  ? const SpinKitFadingCircle(
                                       color: Colors.white,
+                                      size: 24.0,
+                                    )
+                                  : const Text(
+                                      'Sign in',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-                          );
-                        },
-                      ),
-                    ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

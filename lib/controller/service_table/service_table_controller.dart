@@ -1,13 +1,20 @@
 import 'package:pos/model/pickup/pickup_model.dart';
 import 'package:pos/model/service_table/service_table_model.dart';
+import 'package:pos/utils/app_preferences.dart';
 import 'package:pos/utils/app_url.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ServiceTableController {
   static Future<List<ServiceTableModel>> getServiceTables() async {
+    final token = AppPreferences.getToken();
+
     const url = '${AppUrl.baseUrl}/api/service-tables';
-    final response = await http.get(Uri.parse(url));
+
+    final response = await http.get(Uri.parse(url), headers: {
+      'Authorization': 'Bearer $token',
+    });
+
     final jsonData = jsonDecode(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -20,7 +27,11 @@ class ServiceTableController {
 
   static Future<List<PickupModel>> getPickup() async {
     const url = '${AppUrl.baseUrl}/api/pickup-points';
-    final response = await http.get(Uri.parse(url));
+    final token = AppPreferences.getToken();
+
+    final response = await http.get(Uri.parse(url), headers: {
+      'Authorization': 'Bearer $token',
+    });
     final jsonData = jsonDecode(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {

@@ -7,6 +7,7 @@ import 'package:pos/cubit/sales/sales_cubit.dart';
 import 'package:flutter/services.dart';
 import 'package:pos/cubit/service_table/service_table_cubit.dart';
 import 'package:pos/cubit/status/status_cubit.dart';
+import 'package:pos/screens/login/login_screen.dart';
 import 'package:pos/screens/main_dashboard/main_dashboard_screen.dart';
 import 'package:pos/utils/app_preferences.dart';
 import 'package:pos/cubit/category/category_cubit.dart';
@@ -46,7 +47,7 @@ class MainApp extends StatelessWidget {
             iconTheme: IconThemeData(color: Colors.white),
           ),
         ),
-        home: const MainDashboardScreen(),
+        home: const LoginScreen(),
       ),
     );
   }

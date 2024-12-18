@@ -185,11 +185,6 @@ class _POSScreenState extends State<POSScreen> {
     });
   }
 
-  double calculateTotalOfIsProcessPanel() {
-    // TODO the calculation will be here...
-    return 0.0;
-  }
-
   // Focus change handlers
   void _onSearchFocusChange() {
     if (!_searchFocusNode.hasFocus) {
@@ -227,29 +222,36 @@ class _POSScreenState extends State<POSScreen> {
             context.read<StatusCubit>().getOrderByStatus(status: "pending");
             context.read<StatusCubit>().getOrderByStatus(status: "preparing");
             context.read<StatusCubit>().getOrderByStatus(status: "ready");
-            context.read<ServiceTableCubit>().getServiceTables();
-            context.read<ServiceTableCubit>().getPickup();
             setState(() {
               cartItems.clear();
               context.read<OrderCubit>().ordersModel = null;
             });
 
+            // Close dialogs
+            Navigator.of(context).pop();
+
             // show snackbar
             final snackBar = SnackBar(
-              content: Text(state.message),
+              content: Text(
+                state.message,
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.green,
             );
             ScaffoldMessenger.of(context).showSnackBar(snackBar);
           }
 
           if (state is OrdersItemDeleteSuccess) {
             // Refresh lists
+            setState(() {
+              context.read<OrderCubit>().ordersModel = null;
+            });
+
             context.read<StatusCubit>().getOrderByStatus(status: "pending");
             context.read<StatusCubit>().getOrderByStatus(status: "preparing");
             context.read<StatusCubit>().getOrderByStatus(status: "ready");
             context.read<ServiceTableCubit>().getServiceTables();
             context.read<ServiceTableCubit>().getPickup();
-
-            setState(() {});
 
             // Show success message
             ScaffoldMessenger.of(context).showSnackBar(
@@ -310,20 +312,14 @@ class _POSScreenState extends State<POSScreen> {
                                         ),
                                       ),
                                       TextButton(
-                                        onPressed: () {
+                                        onPressed: () async {
                                           // Add your delete logic here
-                                          context
+                                          await context
                                               .read<OrderCubit>()
                                               .deleteOrder(context
                                                   .read<OrderCubit>()
                                                   .ordersModel!
                                                   .id);
-                                          setState(() {
-                                            context
-                                                .read<OrderCubit>()
-                                                .ordersModel = null;
-                                          });
-                                          Navigator.of(context).pop();
                                         },
                                         child: const Text(
                                           'Delete',
@@ -923,32 +919,51 @@ class _POSScreenState extends State<POSScreen> {
                                             ),
                                           ),
                                           child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               // selected Customer
-                                              Row(
-                                                children: [
-                                                  const Icon(Icons.person),
-                                                  const SizedBox(width: 5),
-                                                  Text(context
-                                                      .read<OrderCubit>()
-                                                      .ordersModel!
-                                                      .customer
-                                                      .name),
-                                                ],
+                                              Expanded(
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.person),
+                                                    const SizedBox(width: 5),
+                                                    Text(
+                                                      context
+                                                          .read<OrderCubit>()
+                                                          .ordersModel!
+                                                          .customer
+                                                          .name,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      softWrap: true,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
 
-                                              Row(
-                                                children: [
-                                                  const Icon(Icons.home),
-                                                  const SizedBox(width: 5),
-                                                  Text(context
-                                                      .read<OrderCubit>()
-                                                      .ordersModel!
-                                                      .customer
-                                                      .address),
-                                                ],
+                                              Expanded(
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.home),
+                                                    const SizedBox(width: 5),
+                                                    Text(
+                                                      context
+                                                          .read<OrderCubit>()
+                                                          .ordersModel!
+                                                          .customer
+                                                          .address,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      softWrap: true,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -1470,58 +1485,79 @@ class _POSScreenState extends State<POSScreen> {
   }
 
   void _showOrdersInProcess() async {
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
       builder: (context) {
-        // return OrdersInProcessBottomSheet(
-        //   pendingList: context.read<StatusCubit>().pendingStatusList,
-        //   preparingList: context.read<StatusCubit>().preparingStatusList,
-        //   readyList: context.read<StatusCubit>().readyStatusList,
-        // );
-
-        return DefaultTabController(
-          length: 3,
-          child: Scaffold(
-            resizeToAvoidBottomInset: true,
-            backgroundColor: Colors.white,
-            appBar: AppBar(
-              title: const Text(
-                'Orders in Process',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-              bottom: TabBar(
-                indicatorColor: AppColors.primary,
-                tabs: [
-                  Tab(
-                    icon: const Icon(Icons.access_time, color: Colors.orange),
-                    text:
-                        'Pending (${context.read<StatusCubit>().pendingStatusList.length})',
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(24),
+            child: DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  // Header with close button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Orders in Process',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                  Tab(
-                    icon: Icon(Icons.kitchen, color: Colors.pink[200]),
-                    text:
-                        'Preparing (${context.read<StatusCubit>().preparingStatusList.length})',
+                  const SizedBox(height: 16),
+                  // TabBar
+                  TabBar(
+                    indicatorColor: AppColors.primary,
+                    tabs: [
+                      Tab(
+                        icon:
+                            const Icon(Icons.access_time, color: Colors.orange),
+                        text:
+                            'Pending (${context.read<StatusCubit>().pendingStatusList.length})',
+                      ),
+                      Tab(
+                        icon: Icon(Icons.kitchen, color: Colors.pink[200]),
+                        text:
+                            'Preparing (${context.read<StatusCubit>().preparingStatusList.length})',
+                      ),
+                      Tab(
+                        icon:
+                            const Icon(Icons.check_circle, color: Colors.green),
+                        text:
+                            'Ready (${context.read<StatusCubit>().readyStatusList.length})',
+                      ),
+                    ],
                   ),
-                  Tab(
-                    icon: const Icon(Icons.check_circle, color: Colors.green),
-                    text:
-                        'Ready (${context.read<StatusCubit>().readyStatusList.length})',
+                  // TabBarView
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildOrderList(
+                            context.read<StatusCubit>().pendingStatusList),
+                        _buildOrderList(
+                            context.read<StatusCubit>().preparingStatusList),
+                        _buildOrderList(
+                            context.read<StatusCubit>().readyStatusList),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-            body: TabBarView(
-              children: [
-                _buildOrderList(context.read<StatusCubit>().pendingStatusList),
-                _buildOrderList(
-                    context.read<StatusCubit>().preparingStatusList),
-                _buildOrderList(context.read<StatusCubit>().readyStatusList),
-              ],
             ),
           ),
         );

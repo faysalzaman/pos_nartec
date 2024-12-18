@@ -1,5 +1,6 @@
 import 'package:pos/model/order/orders_model.dart';
 import 'package:pos/model/order/status_model.dart';
+import 'package:pos/utils/app_preferences.dart';
 import 'package:pos/utils/app_url.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -8,9 +9,12 @@ class OrderController {
   static Future<List<StatusModel>> getOrderByStatus({
     required String status,
   }) async {
+    final token = AppPreferences.getToken();
     final url = Uri.parse("${AppUrl.baseUrl}/api/orders/status?status=$status");
 
-    final response = await http.get(url);
+    final response = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+    });
     final data = jsonDecode(response.body);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -29,10 +33,13 @@ class OrderController {
     Map<String, dynamic> orderDetails,
     String orderType,
   ) async {
+    final token = AppPreferences.getToken();
+
     final url = Uri.parse("${AppUrl.baseUrl}/api/orders");
 
     final headers = {
       'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
     };
 
     final formattedInstructions = instructions.map(
@@ -95,9 +102,13 @@ class OrderController {
 
   // get order by id
   static Future<OrdersModel> getOrderById(String id) async {
+    final token = AppPreferences.getToken();
     final url = Uri.parse("${AppUrl.baseUrl}/api/orders/$id");
 
-    final headers = {'Content-Type': 'application/json'};
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
     final response = await http.get(url, headers: headers);
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -109,9 +120,13 @@ class OrderController {
   }
 
   static Future<void> deleteOrder(String id) async {
+    final token = AppPreferences.getToken();
     final url = Uri.parse("${AppUrl.baseUrl}/api/orders/$id");
 
-    final headers = {'Content-Type': 'application/json'};
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
     final response = await http.delete(url, headers: headers);
 
@@ -124,10 +139,14 @@ class OrderController {
   // delete order item
   static Future<void> deleteOrdersItemById(
       String id, String orderItemId) async {
+    final token = AppPreferences.getToken();
     final url =
         Uri.parse("${AppUrl.baseUrl}/api/orders/$id/items/$orderItemId");
 
-    final headers = {'Content-Type': 'application/json'};
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
     final response = await http.delete(url, headers: headers);
 
