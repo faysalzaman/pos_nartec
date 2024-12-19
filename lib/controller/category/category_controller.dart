@@ -25,4 +25,22 @@ class CategoryController {
       throw Exception(data['message'] ?? 'Unknown error');
     }
   }
+
+  // delete category
+  static Future<void> deleteCategory(String id) async {
+    final token = AppPreferences.getToken();
+    final url = Uri.parse('${AppUrl.baseUrl}/api/categories/$id');
+
+    final response = await http.delete(url, headers: {
+      'Authorization': 'Bearer $token',
+    });
+
+    var data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print("data: $data");
+    } else {
+      throw Exception(data['message'] ?? 'Failed to delete category');
+    }
+  }
 }

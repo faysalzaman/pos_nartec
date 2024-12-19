@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/cubit/order/order_cubit.dart';
 import 'package:pos/screens/main_dashboard/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/main_dashboard/expenses/expense_type/expense_type_screen.dart';
+import 'package:pos/screens/main_dashboard/expenses/expanses_type/expanses_type_screen.dart';
 import 'package:pos/screens/main_dashboard/expenses/expenses/expenses_screen.dart';
 import 'package:pos/screens/main_dashboard/foods/categories/categories_screen.dart';
 import 'package:pos/screens/main_dashboard/foods/menu_items/menu_items_screen.dart';
@@ -105,13 +105,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _buildMenuItem(Icons.analytics, 'Sales',
                     _currentTitle == 'Sales', fontSize),
                 // Sales & POS Section
-                _buildSectionHeader('Sales & POS', fontSize),
+                _buildSectionHeader('PORTALS', fontSize),
                 _buildMenuItem(Icons.point_of_sale, 'POS',
                     _currentTitle == 'POS', fontSize),
                 _buildMenuItem(Icons.kitchen, 'Kitchen',
                     _currentTitle == 'Kitchen', fontSize),
                 // Food Management Section
-                _buildSectionHeader('Food Management', fontSize),
+                _buildSectionHeader('FOODS', fontSize),
                 _buildMenuItem(Icons.category, 'Categories',
                     _currentTitle == 'Categories', fontSize),
                 _buildMenuItem(Icons.restaurant_menu, 'Menu Items',
@@ -119,7 +119,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _buildMenuItem(Icons.edit_note, 'Modifiers',
                     _currentTitle == 'Modifiers', fontSize),
                 // Expense Management Section
-                _buildSectionHeader('Expense Management', fontSize),
+                _buildSectionHeader('EXPENSES', fontSize),
                 _buildMenuItem(Icons.account_balance_wallet, 'Expense Type',
                     _currentTitle == 'Expense Type', fontSize),
                 _buildMenuItem(Icons.money_off, 'Expenses',
@@ -281,7 +281,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Expense Type':
-                _currentScreen = const ExpenseTypeScreen();
+                _currentScreen = const ExpansesTypeScreen();
                 context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Expenses':

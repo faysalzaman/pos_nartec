@@ -25,4 +25,16 @@ class CategoryCubit extends Cubit<CategoryState> {
       emit(CategoryError(message: e.toString().replaceAll("Exception:", "")));
     }
   }
+
+  Future<void> deleteCategory(String id) async {
+    emit(CategoryDeleteLoading());
+
+    try {
+      await CategoryController.deleteCategory(id);
+      emit(CategoryDeleteSuccess());
+    } catch (e) {
+      emit(CategoryDeleteError(
+          message: e.toString().replaceAll("Exception:", "")));
+    }
+  }
 }

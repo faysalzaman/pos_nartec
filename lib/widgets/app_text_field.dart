@@ -18,8 +18,8 @@ class AppTextField extends StatelessWidget {
     required this.prefixIcon,
     this.obscureText = false,
     this.keyboardType,
-    this.textInputAction,
     this.onEditingComplete,
+    this.textInputAction,
   });
 
   @override

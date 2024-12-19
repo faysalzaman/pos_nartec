@@ -401,8 +401,16 @@ class _POSScreenState extends State<POSScreen> {
                     Expanded(
                       child: TextField(
                         focusNode: _searchFocusNode,
+                        onChanged: (value) {
+                          menuCubit.getMenuItems(
+                            page: menuItemPage,
+                            limit: menuItemLimit,
+                            search: value,
+                            category: selectedCategory ?? "",
+                          );
+                        },
                         decoration: InputDecoration(
-                          hintText: 'Search product by names',
+                          hintText: 'Search Items...',
                           hintStyle: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -884,7 +892,7 @@ class _POSScreenState extends State<POSScreen> {
                                                                           onPressed: isAgreed
                                                                               ? () {
                                                                                   // Handle cancellation logic here
-                                                                                  // You can use reasonController.text to get the reason
+                                                                                  // You can use reasonController.Text to get the reason
                                                                                   Navigator.pop(context);
                                                                                 }
                                                                               : null,
