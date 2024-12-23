@@ -38,6 +38,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   bool _isEditing = false;
   Category? _editingCategory;
   String? _existingImageUrl;
+  String? _previewImageUrl;
 
   @override
   void initState() {
@@ -306,45 +307,55 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                         onSelectChanged: (_) {},
                                         cells: [
                                           DataCell(
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              child: Image.network(
-                                                category.image,
-                                                width: 50,
-                                                height: 50,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error,
-                                                    stackTrace) {
-                                                  return Container(
-                                                    width: 50,
-                                                    height: 50,
-                                                    color: Colors.grey[200],
-                                                    child: const Icon(
-                                                      Icons.image_not_supported,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  );
-                                                },
-                                                loadingBuilder: (context, child,
-                                                    loadingProgress) {
-                                                  if (loadingProgress == null) {
-                                                    return child;
-                                                  }
-                                                  return Container(
-                                                    width: 50,
-                                                    height: 50,
-                                                    color: Colors.grey[200],
-                                                    child: const Center(
-                                                      child:
-                                                          SpinKitFadingCircle(
-                                                        color:
-                                                            AppColors.primary,
-                                                        size: 24.0,
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _previewImageUrl =
+                                                      category.image;
+                                                });
+                                              },
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                child: Image.network(
+                                                  category.image,
+                                                  width: 50,
+                                                  height: 50,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error,
+                                                      stackTrace) {
+                                                    return Container(
+                                                      width: 50,
+                                                      height: 50,
+                                                      color: Colors.grey[200],
+                                                      child: const Icon(
+                                                        Icons
+                                                            .image_not_supported,
+                                                        color: Colors.grey,
                                                       ),
-                                                    ),
-                                                  );
-                                                },
+                                                    );
+                                                  },
+                                                  loadingBuilder: (context,
+                                                      child, loadingProgress) {
+                                                    if (loadingProgress ==
+                                                        null) {
+                                                      return child;
+                                                    }
+                                                    return Container(
+                                                      width: 50,
+                                                      height: 50,
+                                                      color: Colors.grey[200],
+                                                      child: const Center(
+                                                        child:
+                                                            SpinKitFadingCircle(
+                                                          color:
+                                                              AppColors.primary,
+                                                          size: 24.0,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -439,6 +450,37 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
               // Add the form panel
               if (_showFormPanel) _buildCategoryFormPanel(),
+              if (_previewImageUrl != null)
+                GestureDetector(
+                  onTap: () => setState(() => _previewImageUrl = null),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.7),
+                    child: Center(
+                      child: Stack(
+                        children: [
+                          Image.network(
+                            _previewImageUrl!,
+                            width: MediaQuery.of(context).size.width * 0.7,
+                            fit: BoxFit.contain,
+                          ),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _previewImageUrl = null),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
