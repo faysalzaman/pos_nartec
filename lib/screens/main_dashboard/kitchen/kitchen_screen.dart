@@ -5,23 +5,28 @@ class KitchenScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Kitchen'),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Kitchen Display',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
-          // Add your kitchen content here
-          const Text('Kitchen orders and status will go here'),
-        ],
+      body: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Kitchen Display',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 16),
+            // Add your kitchen content here
+            const Text('Kitchen orders and status will go here'),
+          ],
+        ),
       ),
     );
   }

@@ -37,4 +37,28 @@ class CategoryCubit extends Cubit<CategoryState> {
           message: e.toString().replaceAll("Exception:", "")));
     }
   }
+
+  Future<void> createCategory(String name, String imagePath) async {
+    emit(CreateCategoryLoading());
+
+    try {
+      await CategoryController.createCategory(name, imagePath);
+      emit(CreateCategorySuccess());
+    } catch (e) {
+      emit(CreateCategoryError(
+          message: e.toString().replaceAll("Exception:", "")));
+    }
+  }
+
+  Future<void> updateCategory(String id, String name, String imagePath) async {
+    emit(UpdateCategoryLoading());
+
+    try {
+      await CategoryController.updateCategory(id, name, imagePath);
+      emit(UpdateCategorySuccess());
+    } catch (e) {
+      emit(UpdateCategoryError(
+          message: e.toString().replaceAll("Exception:", "")));
+    }
+  }
 }

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos/cubit/order/order_cubit.dart';
 import 'package:pos/screens/main_dashboard/dashboard/dashboard_screen.dart';
+import 'package:pos/screens/main_dashboard/expenses/expanses/expanses_screen.dart';
 import 'package:pos/screens/main_dashboard/expenses/expanses_type/expanses_type_screen.dart';
-import 'package:pos/screens/main_dashboard/expenses/expenses/expenses_screen.dart';
 import 'package:pos/screens/main_dashboard/foods/categories/categories_screen.dart';
 import 'package:pos/screens/main_dashboard/foods/menu_items/menu_items_screen.dart';
 import 'package:pos/screens/main_dashboard/foods/modifiers/modifiers_screen.dart';
@@ -285,7 +285,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Expenses':
-                _currentScreen = const ExpensesScreen();
+                _currentScreen = const ExpansesScreen();
                 context.read<OrderCubit>().ordersModel = null;
                 break;
               case 'Categories':

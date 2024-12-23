@@ -9,6 +9,7 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final VoidCallback? onEditingComplete;
+  final Widget? suffixIcon;
 
   const AppTextField({
     super.key,
@@ -20,6 +21,7 @@ class AppTextField extends StatelessWidget {
     this.keyboardType,
     this.onEditingComplete,
     this.textInputAction,
+    this.suffixIcon,
   });
 
   @override
@@ -32,6 +34,7 @@ class AppTextField extends StatelessWidget {
       textInputAction: textInputAction,
       onEditingComplete: onEditingComplete,
       decoration: InputDecoration(
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.grey[100],
         prefixIcon: Icon(prefixIcon),

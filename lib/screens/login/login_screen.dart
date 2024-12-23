@@ -58,6 +58,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
   }
 
+  void _togglePasswordVisibility() {
+    setState(() {
+      obscurePassword = !obscurePassword;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -183,6 +189,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           onEditingComplete: () {
                             _passwordFocusNode.unfocus();
                           },
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.grey,
+                            ),
+                            onPressed: _togglePasswordVisibility,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         BlocBuilder<AuthCubit, AuthState>(

@@ -27,3 +27,23 @@ class CategoryDeleteError extends CategoryState {
 
   CategoryDeleteError({required this.message});
 }
+
+class CreateCategoryLoading extends CategoryState {}
+
+class CreateCategorySuccess extends CategoryState {}
+
+class CreateCategoryError extends CategoryState {
+  final String message;
+
+  CreateCategoryError({required this.message});
+}
+
+class UpdateCategoryLoading extends CategoryState {}
+
+class UpdateCategorySuccess extends CategoryState {}
+
+class UpdateCategoryError extends CategoryState {
+  final String message;
+
+  UpdateCategoryError({required this.message});
+}
